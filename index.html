@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dusk Dunes">
 <title>Dusk Dunes</title>
 <style>
 :root{--ink:#f3e9ff;--glow:#5ff0d2;--veil:rgba(24,16,48,.72);box-sizing:border-box}
@@ -39,19 +43,24 @@ b{color:var(--glow);font-weight:600}
 #xh{display:none;position:fixed;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border:2px solid #5ff0d2;border-radius:50%;pointer-events:none;opacity:.8}
 #pauseB{display:none;position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #6b4f7a;background:rgba(27,20,54,.8);color:#f3e9ff;z-index:6}
 canvas{touch-action:none}
+#itv{display:none;position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 90px 24px rgba(255,40,40,.55);z-index:4}
+html,body{position:fixed;inset:0;width:100%;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#fxBox{margin:10px 0}#fxBox .fxh{font-size:.9rem;color:#9fe9d8;margin-bottom:4px}
+#fxList{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}#fxList label{margin:3px 0;font-size:.85rem}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="hud"><div id="obj"></div><div id="stat"></div></div>
-<div id="sb"></div><div id="modeLbl"></div><div id="tip"></div><div id="xh"></div><button id="pauseB">Menu</button>
+<div id="sb"></div><div id="modeLbl"></div><div id="tip"></div><div id="itv"></div><div id="xh"></div><button id="pauseB">Menu</button>
 <div id="veil"><div>
 <h1>Dusk Dunes</h1>
 <p id="gdesc"></p>
 <p><b>Click</b> to look around. <b>W A S D</b> or arrow keys to walk. <b>Shift</b> to run. <b>Esc</b> to pause.</p>
-<p><b>On iPhone:</b> you always move forward. Turn your body or tilt the phone to look and steer. Touch and hold to brake, tap to jump. Try the Cardboard view in a headset.</p>
+<p><b>On iPhone:</b> you always move forward. Tilt the phone or swipe to steer. Touch and hold to brake, tap to jump. Flick the phone up to jump, down to dive.</p>
+<p id="a2hs" style="display:none"><b>Full screen:</b> in Safari tap Share, then Add to Home Screen, and open it from your home screen to hide the browser bars.</p>
 <p><button id="startB" style="font:inherit;padding:8px 22px;border-radius:8px;border:1px solid #5ff0d2;background:#1b1436;color:#f3e9ff;cursor:pointer">Start</button></p>
-<div id="opts"><label><input type="checkbox" id="phoneC"> Phone mode (always forward, tilt to steer)</label><label>World <select id="worldSel"></select></label><div id="gg"></div><select id="gameSel" hidden></select><label>View <select id="modeSel"></select></label><label>Depth <input id="sepR" type="range" min=".02" max="1.2" step=".01" value=".35"></label><label><input id="swapC" type="checkbox"> Swap eyes</label><p>Press <b>M</b> to change view while walking, <b>[</b> and <b>]</b> to change depth.</p>
+<div id="opts"><label><input type="checkbox" id="phoneC"> Phone mode (always forward, tilt to steer)</label><label><input type="checkbox" id="swipeC"> Swipe to steer (works with tilt)</label><label>World <select id="worldSel"></select></label><div id="gg"></div><select id="gameSel" hidden></select><label>3D view <select id="modeSel"></select></label><div id="fxBox"><div class="fxh">Effects (stack with any view, and each other)</div><div id="fxList"></div></div><label>Depth <input id="sepR" type="range" min=".02" max="1.2" step=".01" value=".35"></label><label><input id="swapC" type="checkbox"> Swap eyes</label><p>Press <b>M</b> to change view while walking, <b>[</b> and <b>]</b> to change depth.</p>
 <div id="mp"><label>Name <input id="mpName" maxlength="12" value="Player" style="text-transform:none"></label>
 <div><button id="mpHost">Host game</button> <input id="mpCode" maxlength="4" placeholder="CODE"> <button id="mpJoin">Join</button></div>
 <p id="mpSt">Multiplayer: host a game and share the 4-letter code.</p></div></div>
@@ -69,6 +78,7 @@ const cam=new THREE.PerspectiveCamera(70,1,0.1,600);
 cam.rotation.order='YXZ';
 function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
 addEventListener('resize',size);size();
+addEventListener('orientationchange',()=>setTimeout(()=>{size();rebuild()},350));if(window.visualViewport)visualViewport.addEventListener('resize',()=>{size();rebuild()});
 
 const hemi=new THREE.HemisphereLight(0xb79cff,0x4a3a5c,0.9);S.add(hemi);
 const sun=new THREE.DirectionalLight(0xff9f7a,1.1);sun.position.set(-60,18,-40);S.add(sun);
@@ -114,24 +124,29 @@ document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockEl
 addEventListener('mousemove',e=>{if(!locked)return;yaw-=e.movementX*.0022;pitch=Math.max(-1.4,Math.min(1.4,pitch-e.movementY*.0022))});
 
 const names=['Normal','Anaglyph red/cyan','Anaglyph red/green','Anaglyph red/blue','Parallel side-by-side','Cross-eyed side-by-side','Mirror stereoscope','Top / bottom','Row-interlaced','Column-interlaced','Checkerboard','Cardboard phone viewer','ChromaDepth','Wiggle-gram','Pulfrich (dark lens over one eye)','Anaglyph amber/blue','Anaglyph green/magenta','Anaglyph optimized red/cyan','Depth map','Disparity map','Random-dot autostereogram','Pattern autostereogram','Sway parallax (no glasses)','Left eye only','Right eye only','Double-image overlay','Wipe compare','Contour lines','Thermal depth','Chromatic split','Fisheye dome','Night vision','Retro 8-bit dither','CRT scanlines','Kaleidoscope','Neon depth edges','View-Master reel','Tilt-shift miniature','Toon outline','Underwater ripple'];
-const ONE=[12,14,18,20,21,22,27,28,29,30,31,32,33,34,35,37,38,39];
+const ONE=[0,12,14,18,20,21,22,27,28,29,30,31,32,33,34,35,37,38,39];
+const OFF=new Set([2,3,7,8,9,10,13,14,15,16,28,36,27,29,30,31,32,33,34,35,37,38,39]);
+const FXN=['Fisheye dome','Kaleidoscope','Underwater ripple','Tilt-shift miniature','Chromatic split','Toon outline','Contour lines','Neon depth edges','Night vision','Retro 8-bit dither','CRT scanlines'];
+const FXV=FXN.map(()=>0);
+FXN.forEach((n,i)=>{const l=document.createElement('label'),c=document.createElement('input');c.type='checkbox';c.onchange=()=>{FXV[i]=c.checked?1:0};l.append(c,' '+n);document.getElementById('fxList').append(l)});
 let mode=1,sep=.35,swap=false;
 const sel=document.getElementById('modeSel'),rng=document.getElementById('sepR'),swp=document.getElementById('swapC'),lbl=document.getElementById('modeLbl');
-names.forEach((n,i)=>sel.add(new Option(n,i)));
+names.forEach((n,i)=>{if(!OFF.has(i))sel.add(new Option(n,i))});
+function nextMode(d){let m=mode;do{m=(m+d+names.length)%names.length}while(OFF.has(m));setMode(m)}
 function setMode(m){mode=(m+names.length)%names.length;sel.value=mode;lbl.textContent=names[mode]+' (M changes view)'}
 sel.onchange=()=>setMode(+sel.value);rng.oninput=()=>{sep=+rng.value};swp.onchange=()=>{swap=swp.checked};
 addEventListener('keydown',e=>{
-  if(e.code==='KeyM')setMode(mode+(e.shiftKey?-1:1));
+  if(e.code==='KeyM')nextMode(e.shiftKey?-1:1);
   if(e.code==='BracketLeft'||e.code==='BracketRight'){sep=Math.max(.02,Math.min(1.2,sep+(e.code==='BracketRight'?.05:-.05)));rng.value=sep}
 });
 const U={tL:{value:null},tR:{value:null},tD:{value:null},res:{value:new THREE.Vector2()},mode:{value:0},time:{value:0},near:{value:cam.near},far:{value:cam.far}};
-let tL,tR;
+let tL,tR,tL2,tR2;
 function mk(w,h,d){const t=new THREE.WebGLRenderTarget(w,h,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});if(d)t.depthTexture=new THREE.DepthTexture(w,h,THREE.UnsignedIntType);return t}
 function rebuild(){
-  const pr=R.getPixelRatio(),w=Math.floor(innerWidth*pr),h=Math.floor(innerHeight*pr);
-  [tL,tR].forEach(t=>{if(t){t.dispose();t.depthTexture&&t.depthTexture.dispose()}});
-  tL=mk(w,h,true);tR=mk(w,h,false);
-  U.tL.value=tL.texture;U.tR.value=tR.texture;U.tD.value=tL.depthTexture;U.res.value.set(w,h);
+  const pr=R.getPixelRatio(),w=Math.floor(innerWidth*pr),h2=Math.floor(innerHeight*pr);
+  [tL,tR,tL2,tR2].forEach(t=>{if(t){t.dispose();t.depthTexture&&t.depthTexture.dispose()}});
+  tL=mk(w,h2,true);tR=mk(w,h2,true);tL2=mk(w,h2,false);tR2=mk(w,h2,false);
+  U.tL.value=tL.texture;U.tR.value=tR.texture;U.tD.value=tL.depthTexture;U.res.value.set(w,h2);
 }
 addEventListener('resize',rebuild);rebuild();
 const qm=new THREE.ShaderMaterial({uniforms:U,depthTest:false,depthWrite:false,
@@ -203,12 +218,51 @@ function eye(t,side,sway){
   ec.projectionMatrixInverse.copy(ec.projectionMatrix).invert();
   R.setRenderTarget(t);R.render(S,ec);
 }
+const FXU={tC:{value:null},tDp:{value:null},res:U.res,time:U.time,near:U.near,far:U.far,f:{value:FXV}};
+const fxm=new THREE.ShaderMaterial({uniforms:FXU,depthTest:false,depthWrite:false,
+vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
+fragmentShader:`
+uniform sampler2D tC,tDp;uniform vec2 res;uniform float time,near,far;uniform float f[11];varying vec2 vUv;
+float lum(vec3 c){return dot(c,vec3(.299,.587,.114));}
+float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+float dep(vec2 u){float d=texture2D(tDp,u).r;return clamp((near*far/(far-d*(far-near))-2.)/70.,0.,1.);}
+vec3 C(vec2 u){return texture2D(tC,u).rgb;}
+void main(){
+  vec2 u=vUv,a=vec2(res.x/res.y,1.);float mask=1.;
+  if(f[0]>.5){vec2 q=(u-.5)*a*2.;float r=length(q);if(r>1.)mask=0.;u=(q*(.55+.45*r))/a*.5+.5;}
+  if(f[1]>.5){vec2 q=(u-.5)*a;float an=atan(q.y,q.x),r=length(q),sg=.785398;an=abs(mod(an,sg)-sg*.5)+time*.15;u=vec2(cos(an),sin(an))*r/a+.5;}
+  if(f[2]>.5)u+=vec2(sin(u.y*60.+time*3.)*.003,cos(u.x*45.+time*2.)*.003);
+  if(f[10]>.5){vec2 q=u-.5;u=u+q*dot(q,q)*.25;if(u.x<0.||u.x>1.||u.y<0.||u.y>1.)mask=0.;}
+  if(f[9]>.5)u=(floor(u*res/3.)*3.+1.5)/res;
+  u=clamp(u,.001,.999);
+  vec3 c;
+  if(f[3]>.5){float b=smoothstep(.12,.5,abs(u.y-.5))*.012;vec3 sm=vec3(0.);for(int i=-3;i<=3;i++){sm+=C(vec2(u.x+float(i)*b*.5,u.y+float(i)*b));}sm/=7.;c=mix(vec3(lum(sm)),sm,1.35);}
+  else c=C(u);
+  if(f[4]>.5){vec2 o=vec2(.008*(1.-dep(u)),0.);c=vec3(C(u+o).r,c.g,C(u-o).b);}
+  vec2 px=2./res;float e=0.;
+  if(f[5]>.5||f[7]>.5)e=abs(dep(u+vec2(px.x,0.))-dep(u-vec2(px.x,0.)))+abs(dep(u+vec2(0.,px.y))-dep(u-vec2(0.,px.y)));
+  if(f[5]>.5)c=mix(floor(c*4.+.5)/4.,vec3(0.),clamp(e*50.,0.,1.));
+  if(f[6]>.5){float fr=fract(dep(u)*14.);float ln=smoothstep(.12,0.,min(fr,1.-fr));c=mix(c*.7,vec3(1.,.9,.5),ln);}
+  if(f[7]>.5)c=vec3(.03,.02,.08)+vec3(.2,1.,.85)*clamp(e*60.,0.,1.)+c*.12;
+  if(f[8]>.5){float n=hash(u*res+time);c=clamp(vec3(.1,1.,.2)*(lum(c)*1.6+.08*n)*(1.1-length(u-.5)*1.4),0.,1.);}
+  if(f[9]>.5){float bd=hash(floor(gl_FragCoord.xy/3.))-.5;c=floor(c*4.+bd+.5)/4.;}
+  if(f[10]>.5)c*=.75+.25*sin(gl_FragCoord.y*3.1416);
+  gl_FragColor=vec4(c*mask,1.);
+}`});
+const fxs=new THREE.Scene(),fxq=new THREE.Mesh(new THREE.PlaneGeometry(2,2),fxm);fxq.frustumCulled=false;fxs.add(fxq);
 function draw(t){
+  const fxOn=FXV.some(v=>v);
   U.mode.value=mode;U.time.value=t;
-  if(mode===0){R.setRenderTarget(null);R.render(S,cam);return}
+  if(mode===0&&!fxOn){R.setRenderTarget(null);R.render(S,cam);return}
   const one=ONE.includes(mode),ls=swap?1:-1;
-  eye(tL,one?0:ls,mode===14?Math.sin(t*2)*.9:mode===22?Math.sin(t*3)*.5:0);
+  eye(tL,one?0:ls,mode===22?Math.sin(t*3)*.5:0);
   if(!one)eye(tR,-ls,0);
+  let ca=tL,cb=tR;
+  if(fxOn){
+    FXU.tC.value=tL.texture;FXU.tDp.value=tL.depthTexture;R.setRenderTarget(tL2);R.render(fxs,qc);ca=tL2;
+    if(!one){FXU.tC.value=tR.texture;FXU.tDp.value=tR.depthTexture;R.setRenderTarget(tR2);R.render(fxs,qc);cb=tR2}
+  }
+  U.tL.value=ca.texture;U.tR.value=cb.texture;
   R.setRenderTarget(null);R.render(qs,qc);
 }
 setMode(1);
@@ -270,7 +324,7 @@ const GM=[
  upd(dt,t){flyStep(dt,t,0,1.2);st('')}}
 ];
 function end(win,txt){if(G.over)return;G.over=true;G.res=(win?'':'out: ')+sw(txt);objE.innerHTML=(win?'Win: ':'Game over: ')+sw(txt)+'<br><small>Press R to play again</small>'}
-function start(i,sd){ents.forEach(e=>S.remove(e));ents=[];(G.mt||[]).forEach(o=>{S.remove(o.m);S.remove(o.k)});(G.e||[]).forEach(m=>S.remove(m));(G.gl||[]).forEach(m=>{S.remove(m);S.remove(m.userData.k)});gi=i;gsel.value=i;G={t:0,n:0,over:false,mt:[]};pos.set(0,0,0);yaw=0;pitch=0;pickPrompted=false;jy=0;vy=0;vx=0;vz=0;{const R0=Math.random;if(sd!==undefined){curSeed=sd;seedRng(sd)}GM[i].init();Math.random=R0}gd.textContent=sw(GM[i].d)+' '+WORLDS[wi].t;st('');xh.style.display=GM[i].aim?'block':'none';gridDraw()}
+function start(i,sd){ents.forEach(e=>S.remove(e));ents=[];(G.mt||[]).forEach(o=>{S.remove(o.m);S.remove(o.k)});(G.e||[]).forEach(m=>S.remove(m));(G.gl||[]).forEach(m=>{S.remove(m);S.remove(m.userData.k)});gi=i;gsel.value=i;G={t:0,n:0,over:false,mt:[]};pos.set(0,0,0);yaw=0;pitch=0;pickPrompted=false;smClear();resetMS();lastSnap=null;jy=0;vy=0;vx=0;vz=0;{const R0=Math.random;if(sd!==undefined){curSeed=sd;seedRng(sd)}GM[i].init();Math.random=R0}spread();gd.textContent=sw(GM[i].d)+' '+WORLDS[wi].t;st('');xh.style.display=GM[i].aim?'block':'none';gridDraw()}
 function gameTick(dt,t){if(G.over||!locked)return;G.t+=dt;GM[gi].upd(dt,t)}
 const D={lights:'lights',light:'light',fireflies:'fireflies',firefly:'firefly',shadow:'shadow',ghost:'ghost',meteors:'meteors',meteor:'meteor',stones:'stones',stone:'stone',beacon:'beacon',teal:'teal',red:'red',pink:'pink'};
 const WORLDS=[
@@ -344,7 +398,7 @@ function seedRng(sd){let a=sd>>>0;Math.random=()=>{a=a+0x6D2B79F5|0;let t=Math.i
 function seedNow(){if(isHost)return curSeed=Math.floor(Math.random()*1e9)}
 function order(){return ['host',...conns.map(c=>c.peer)]}
 function advance(){const o=order();pk=o[(o.indexOf(pk)+1)%o.length]}
-function nameOf(id){if(id===uid)return mn();const s=remote[id];return s?String(s.n||'Player').slice(0,12):'host'}
+function nameOf(id){if(id===myId())return mn();const s=remote[id];return s?String(s.n||'Player').slice(0,12):'host'}
 function cfgMsg(){return{t:'cfg',w:+wsel.value,g:gi,s:curSeed,pk}}
 function bcast(){if(!isHost)return;lockPick(pk!=='host');conns.forEach(c=>c.open&&c.send(cfgMsg()))}
 function choose(w,g){w=w===undefined?wi:w;g=g===undefined?gi:g;
@@ -355,7 +409,7 @@ function lockPick(b){wsel.disabled=gsel.disabled=b;gg.classList.toggle('lock',b)
 function netErr(e){say(e.type==='peer-unavailable'?'No game found with that code.':e.type==='unavailable-id'?'Code clash, press Host again.':'Could not reach the PeerJS broker. Multiplayer needs the GitHub Pages version; the claude.ai preview blocks outside connections.')}
 function mk2(id,cb){if(!window.Peer){say('Multiplayer library did not load.');return false}if(peer)try{peer.destroy()}catch(e){}conns=[];remote={};plist={};isHost=isClient=false;peer=new Peer(id);peer.on('open',cb);peer.on('error',netErr);return true}
 function hostGame(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<4;i++)c+=a[Math.floor(Math.random()*a.length)];
-  if(!mk2('dd-'+c,()=>{isHost=true;uid='host';pk='host';lockPick(false);seedNow();say('Hosting. Share this code: '+c);document.getElementById('mpCode').value=c;bcast()}))return;
+  if(!mk2('dd-'+c,()=>{isHost=true;uid='host';pk='host';lockPick(false);gridDraw();seedNow();say('Hosting. Share this code: '+c);document.getElementById('mpCode').value=c;bcast()}))return;
   peer.on('connection',cn=>{if(conns.length>=7){cn.on('open',()=>cn.close());return}conns.push(cn);
     cn.on('open',()=>cn.send(cfgMsg()));
     cn.on('data',d=>{if(d&&d.t==='pick'&&pk===cn.peer&&WORLDS[+d.w]&&GM[+d.g]){applyWorld(+d.w,+d.g,seedNow());advance();bcast()}if(d&&d.t==='me')plist[cn.peer]={n:String(d.n||'Player').slice(0,12),x:+d.x,y:+d.y,z:+d.z,yaw:+d.yaw,f:String(d.f||'').slice(0,40)}});
@@ -363,28 +417,32 @@ function hostGame(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='';for(let 
 function joinGame(){const c=document.getElementById('mpCode').value.trim().toUpperCase();if(c.length!==4){say('Enter the 4-letter code.');return}
   if(!mk2(undefined,id=>{uid=id;hostConn=peer.connect('dd-'+c,{reliable:true});say('Connecting...');
     const to=setTimeout(()=>{if(!isClient)say('Could not reach that game.')},9000);
-    hostConn.on('open',()=>{clearTimeout(to);isClient=true;lockPick(true);say('Joined game '+c+'. The host picks world and game.')});
+    hostConn.on('open',()=>{clearTimeout(to);isClient=true;lockPick(true);gridDraw();say('Joined game '+c+'. The host picks world and game.')});
     hostConn.on('data',d=>{if(!d)return;
       if(d.t==='cfg'&&isFinite(+d.w)&&isFinite(+d.g)&&WORLDS[+d.w]&&GM[+d.g]){curSeed=+d.s;pk=String(d.pk||'host');applyWorld(+d.w,+d.g,curSeed);lockPick(pk!==uid)}
-      if(d.t==='st'&&d.p){remote={};Object.entries(d.p).forEach(([k,v])=>{if(k!==uid)remote[k]=v})}});
-    hostConn.on('close',()=>{isClient=false;remote={};lockPick(false);say('The host left.')})}))return}
+      if(d.ms)lastSnap=d.ms;if(d.t==='st'&&d.p){remote={};Object.entries(d.p).forEach(([k,v])=>{if(k!==uid)remote[k]=v})}});
+    hostConn.on('close',()=>{isClient=false;remote={};lockPick(false);gridDraw();say('The host left.')})}))return}
 document.getElementById('mpHost').onclick=hostGame;document.getElementById('mpJoin').onclick=joinGame;
 function avatar(id,n){const g=new THREE.Group(),c=new THREE.Color().setHSL(([...id].reduce((a,ch)=>a*31+ch.charCodeAt(0)|0,7)>>>0)%360/360,.7,.6),m=new THREE.MeshBasicMaterial({color:c});
   const b=new THREE.Mesh(new THREE.CylinderGeometry(.35,.45,1.3,12),m);b.position.y=.65;const hd=new THREE.Mesh(new THREE.SphereGeometry(.3,12,12),m);hd.position.y=1.55;
   const cv2=document.createElement('canvas');cv2.width=256;cv2.height=64;const x=cv2.getContext('2d');x.font='bold 34px sans-serif';x.textAlign='center';x.fillStyle='#fff';x.fillText(n,128,44);
   const sp2=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv2),depthTest:false,fog:false}));sp2.scale.set(3,.75,1);sp2.position.y=2.4;
-  g.add(b,hd,sp2);S.add(g);return g}
+  g.add(b,hd,sp2);g.userData.m=m;g.userData.base=c.getHex();S.add(g);return g}
 let netT=0;
 function netTick(dt){
   netT+=dt;
   if((isHost||isClient)&&netT>.08){netT=0;const me={n:mn(),x:pos.x,y:cam.position.y-1.7,z:pos.z,yaw,f:G.res||''};
-    try{if(isHost){plist.host=me;conns.forEach(c=>c.open&&c.send({t:'st',p:plist}));remote={};Object.entries(plist).forEach(([k,v])=>{if(k!=='host')remote[k]=v})}else if(hostConn&&hostConn.open)hostConn.send(Object.assign({t:'me'},me))}catch(e){}}
+    try{if(isHost){plist.host=me;conns.forEach(c=>c.open&&c.send({t:'st',p:plist,ms:GM[gi]&&GM[gi].mp?lastSnap:undefined}));remote={};Object.entries(plist).forEach(([k,v])=>{if(k!=='host')remote[k]=v})}else if(hostConn&&hostConn.open)hostConn.send(Object.assign({t:'me'},me))}catch(e){}}
   Object.keys(avs).forEach(id=>{if(!remote[id]){S.remove(avs[id]);delete avs[id]}});
   Object.entries(remote).forEach(([id,s])=>{const x=+s.x,y=+s.y,z=+s.z,w=+s.yaw;if(![x,y,z,w].every(isFinite))return;
     let a=avs[id];if(!a){a=avs[id]=avatar(id,String(s.n||'Player').slice(0,12));a.position.set(x,y,z)}
-    const k=Math.min(1,dt*10);a.position.x+=(x-a.position.x)*k;a.position.y+=(y-a.position.y)*k;a.position.z+=(z-a.position.z)*k;a.rotation.y=w});
+    const k=Math.min(1,dt*10);a.position.x+=(x-a.position.x)*k;a.position.y+=(y-a.position.y)*k;a.position.z+=(z-a.position.z)*k;a.rotation.y=w;a.userData.m.color.setHex(lastSnap&&GM[gi].mp&&lastSnap.it===id?0xff3030:a.userData.base)});
   if((isHost||isClient)&&pk===uid&&G.over&&!pickPrompted){pickPrompted=true;if(phoneOn){locked=false;veil.style.display='flex';pauseB.style.display='none'}else document.exitPointerLock();say('Your turn to choose the next world and game.')}
-  if(isHost||isClient){const rows=[['Next to choose',nameOf(pk)],[mn(),G.res||'racing']].concat(Object.values(remote).map(s=>[String(s.n||'Player').slice(0,12),String(s.f||'racing').slice(0,40)]));
+  Object.values(avs).forEach(a=>{const dx=pos.x-a.position.x,dz=pos.z-a.position.z,d=Math.hypot(dx,dz);if(locked&&d<1.3&&d>.001){pos.x+=dx/d*(1.3-d)*.6;pos.z+=dz/d*(1.3-d)*.6}});
+  const mpg=GM[gi]&&GM[gi].mp&&lastSnap;
+  if(isHost||isClient||mpg){let rows=(isHost||isClient)?[['Next to choose',nameOf(pk)]]:[];
+    if(mpg)rows=rows.concat(Object.entries(lastSnap.sc||{}).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[nameOf(k),String(v)]));
+    else rows=rows.concat([[mn(),G.res||'racing']],Object.values(remote).map(s=>[String(s.n||'Player').slice(0,12),String(s.f||'racing').slice(0,40)]));
     sb.replaceChildren(...rows.map(r=>{const d=document.createElement('div');d.textContent=r[0]+': '+r[1];return d}))}else sb.textContent=''}
 
 // ---- more game genres, hover cards ----
@@ -480,7 +538,7 @@ const tipE=document.getElementById('tip'),gg=document.getElementById('gg'),xh=do
 function moveTip(ev){tipE.style.left=Math.max(6,Math.min(ev.clientX+14,innerWidth-250))+'px';tipE.style.top=Math.min(ev.clientY+16,innerHeight-90)+'px'}
 function showTip(t,g,ev){tipE.textContent=g+': '+t;tipE.style.display='block';moveTip(ev)}
 function hideTip(){tipE.style.display='none'}
-function gridDraw(){gg.replaceChildren(...GM.map((g,j)=>{const b=document.createElement('button');b.type='button';b.className=j===gi?'on':'';
+function gridDraw(){gg.replaceChildren(...GM.map((g,j)=>[g,j]).sort((a,b)=>(isHost||isClient)?(b[0].mp?1:0)-(a[0].mp?1:0):0).map(([g,j])=>{const b=document.createElement('button');b.type='button';b.className=j===gi?'on':'';
   const n=document.createElement('b');n.textContent=sw(g.n);const sm=document.createElement('small');sm.textContent=g.g;b.append(n,sm);const tip=sw(g.d);b.title=tip;
   b.onmouseenter=ev=>showTip(tip,g.g,ev);b.onmousemove=moveTip;b.onmouseleave=hideTip;
   b.onclick=ev=>{gsel.value=j;gsel.onchange();showTip(tip,g.g,ev);setTimeout(hideTip,1800)};return b}))}
@@ -488,18 +546,36 @@ function gridDraw(){gg.replaceChildren(...GM.map((g,j)=>{const b=document.create
 const phoneC=document.getElementById('phoneC'),pauseB=document.getElementById('pauseB');
 const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 let phoneOn=false,sensor=false,oriOn=false,devYaw=0,devPitch=0,yawOff=null,braking=false,tS=0,tX=0;
-phoneC.checked=IOS||matchMedia('(pointer:coarse)').matches;
+phoneC.checked=IOS||matchMedia('(pointer:coarse)').matches||('ontouchstart' in window);if(IOS&&!navigator.standalone)document.getElementById('a2hs').style.display='block';
 const zee=new THREE.Vector3(0,0,1),eul=new THREE.Euler(),q0=new THREE.Quaternion(),q1=new THREE.Quaternion(-Math.sqrt(.5),0,0,Math.sqrt(.5)),qd=new THREE.Quaternion(),fv=new THREE.Vector3();
 function onOri(e){if(e.alpha==null)return;const o=((screen.orientation&&screen.orientation.angle)||window.orientation||0)*Math.PI/180;
   eul.set(e.beta*Math.PI/180,e.alpha*Math.PI/180,-e.gamma*Math.PI/180,'YXZ');qd.setFromEuler(eul);qd.multiply(q1);qd.multiply(q0.setFromAxisAngle(zee,-o));
   fv.set(0,0,-1).applyQuaternion(qd);devYaw=Math.atan2(-fv.x,-fv.z);devPitch=Math.asin(Math.max(-1,Math.min(1,fv.y)));sensor=true;if(yawOff===null)yawOff=devYaw-yaw}
-function startPhone(){const go=()=>{locked=true;veil.style.display='none';pauseB.style.display='block';yawOff=null};
-  const on=()=>{if(!oriOn){oriOn=true;addEventListener('deviceorientation',onOri)}};
-  if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')on();go()}).catch(go)}else{on();go()}}
+let lpx=0,lpy=0,lpz=0,lpOk=false,jerkT=0,wl=null,nsv=null,mvAcc=0,holdT=0;
+function jumpNow(){if(WF==='swim')jy=Math.min(20,jy+5);else if(jy<=.01)vy=WF==='lowg'?9:7.5}
+function diveNow(){if(WF==='swim')jy=Math.max(0,jy-5);else if(jy>.05)vy=Math.min(vy,-14)}
+function onMot(e){const a=e.accelerationIncludingGravity;if(!a||a.x==null||!phoneOn||!locked)return;
+  if(!lpOk){lpx=a.x;lpy=a.y;lpz=a.z;lpOk=true;return}
+  const gl=Math.hypot(lpx,lpy,lpz)||1,d=((a.x-lpx)*lpx+(a.y-lpy)*lpy+(a.z-lpz)*lpz)/gl;
+  lpx+=(a.x-lpx)*.1;lpy+=(a.y-lpy)*.1;lpz+=(a.z-lpz)*.1;
+  const now=performance.now();if(now>jerkT&&Math.abs(d)>9){jerkT=now+700;if(d>0)jumpNow();else diveNow()}}
+async function keepAwake(){
+  try{if('wakeLock' in navigator){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null});return}}catch(e){}
+  if(!nsv){try{const c0=document.createElement('canvas');c0.width=c0.height=16;const x0=c0.getContext('2d');setInterval(()=>{x0.fillStyle=Math.random()<.5?'#000':'#010101';x0.fillRect(0,0,16,16)},500);
+    nsv=document.createElement('video');nsv.setAttribute('playsinline','');nsv.muted=true;nsv.loop=true;nsv.style.cssText='position:fixed;width:1px;height:1px;opacity:.01;pointer-events:none;left:0;top:0';nsv.srcObject=c0.captureStream(2);document.body.appendChild(nsv)}catch(e){return}}
+  try{await nsv.play()}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&phoneOn&&locked)keepAwake()});
+function goFull(){try{const el=document.documentElement,fn=el.requestFullscreen||el.webkitRequestFullscreen;if(fn){const r=fn.call(el);if(r&&r.catch)r.catch(()=>{})}}catch(e){}}
+function startPhone(){goFull();
+  const go=()=>{locked=true;veil.style.display='none';pauseB.style.display='block';yawOff=null;keepAwake()};
+  const on=()=>{if(!oriOn){oriOn=true;addEventListener('deviceorientation',onOri);addEventListener('devicemotion',onMot)}};
+  const DO=window.DeviceOrientationEvent,DM=window.DeviceMotionEvent;
+  if(DO&&typeof DO.requestPermission==='function'){const p1=DO.requestPermission(),p2=(DM&&typeof DM.requestPermission==='function')?DM.requestPermission():Promise.resolve('granted');Promise.all([p1,p2]).then(r=>{if(r[0]==='granted')on();go()}).catch(go)}else{on();go()}}
 pauseB.onclick=()=>{locked=false;veil.style.display='flex';pauseB.style.display='none'};
-cv.addEventListener('touchstart',e=>{if(!phoneOn||!locked)return;e.preventDefault();braking=sensor;tS=performance.now();tX=e.touches[0].clientX},{passive:false});
-cv.addEventListener('touchmove',e=>{if(!phoneOn||!locked||sensor)return;e.preventDefault();const x=e.touches[0].clientX;yaw-=(x-tX)*.006;tX=x},{passive:false});
-cv.addEventListener('touchend',()=>{if(!phoneOn||!locked)return;braking=false;if(performance.now()-tS<200){if(WF==='swim')jy=Math.min(20,jy+4);else if(jy<=.01)vy=WF==='lowg'?9:7.5}});
+const swipeC=document.getElementById('swipeC');swipeC.checked=phoneC.checked;
+cv.addEventListener('touchstart',e=>{if(!phoneOn||!locked)return;e.preventDefault();tS=performance.now();tX=e.touches[0].clientX;mvAcc=0;clearTimeout(holdT);holdT=setTimeout(()=>{if(mvAcc<6)braking=true},260)},{passive:false});
+cv.addEventListener('touchmove',e=>{if(!phoneOn||!locked)return;e.preventDefault();const x=e.touches[0].clientX,dx=x-tX;tX=x;mvAcc+=Math.abs(dx);if(swipeC.checked||!sensor){if(sensor)yawOff+=dx*.006;else yaw-=dx*.006}},{passive:false});
+cv.addEventListener('touchend',()=>{if(!phoneOn||!locked)return;clearTimeout(holdT);braking=false;if(mvAcc<6&&performance.now()-tS<220)jumpNow()});
 
 // ---- five more worlds, one more game ----
 let vx=0,vz=0,slow=0;
@@ -523,6 +599,77 @@ GM.push(
   if(G.has&&Math.hypot(pos.x,pos.z)<6)end(1,`Flag captured in ${T(G.t)}`);else if(d2<2)end(0,'The guard caught you')}}
 );
 
+// ---- true multiplayer modes: host-authoritative shared world ----
+let MS={},lastSnap=null,sm=[];
+const itv=document.getElementById('itv');
+const myId=()=>isClient?uid:'host';
+function resetMS(){MS={e:[],sc:{},o:'',s:'',over:0,w:'',res:'',it:'',rt:0,cd:0,acc:0,cdm:{}}}
+function smClear(){sm.forEach(o=>S.remove(o.m));sm=[];itv.style.display='none'}
+function spread(){if(isHost||isClient){const a=([...myId()].reduce((x,ch)=>x*31+ch.charCodeAt(0)|0,7)>>>0)%360*Math.PI/180;pos.x=Math.cos(a)*6;pos.z=Math.sin(a)*6}}
+function allP(){const a=[{id:myId(),n:mn(),x:pos.x,y:cam.position.y,z:pos.z}];Object.entries(remote).forEach(([k,v])=>{if(k===myId())return;const x=+v.x,z=+v.z;if(isFinite(x)&&isFinite(z))a.push({id:k,x,z,y:+v.y+1.7})});return a}
+function ensureSc(PL,def){PL.forEach(p=>{if(MS.sc[p.id]===undefined)MS.sc[p.id]=def});Object.keys(MS.sc).forEach(k=>{if(!PL.some(p=>p.id===k))delete MS.sc[k]})}
+function mpEnd(w,res){MS.over=1;MS.w=w;MS.res=res}
+const topSc=()=>Object.entries(MS.sc).sort((a,b)=>b[1]-a[1])[0];
+function mvz(){const a=Math.random()*6.283,d=30+Math.random()*70,x=Math.cos(a)*d,z=Math.sin(a)*d;MS.e[0]=[2,x,h(x,z)+6,z,1]}
+function smMk(type){let m;
+  if(type===2||type===3){const r=type===2?14:2.5,hh=type===2?16:60;m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,hh,24,1,true),new THREE.MeshBasicMaterial({color:type===2?P.zone:P.good,transparent:true,opacity:.3,side:2,fog:false}));S.add(m)}
+  else m=ball(type===1?P.chase:P.good,type===1?.9:.7);
+  return m}
+function applySnap(ms,inst){const e=Array.isArray(ms.e)?ms.e:[];
+  while(sm.length<e.length){const ty=+e[sm.length][0]||0;sm.push({m:smMk(ty),tg:new THREE.Vector3(),init:0})}
+  sm.forEach((o,i)=>{const v=e[i];if(!v){o.m.visible=false;return}const x=+v[1],y=+v[2],z=+v[3];if(!isFinite(x+y+z))return;o.tg.set(x,y,z);o.m.visible=!!v[4];if(inst||!o.init){o.m.position.copy(o.tg);o.init=1}});
+  obj(String(ms.o||''));let t=String(ms.s||'');const me=myId(),itMe=ms.it&&ms.it===me;if(itMe)t='YOU '+(GM[gi].itLabel||'ARE IT')+'. '+t;st(t);itv.style.display=itMe?'block':'none';
+  if(ms.over&&!G.over)end(ms.w===me||ms.w==='*',String(ms.res||'Round over'))}
+function mpTick(dt,t){const gm=GM[gi];if(!gm||!gm.mp)return;
+  if(!isClient){if(!MS.over&&(locked||conns.length))gm.sim(dt,t);lastSnap={e:MS.e,sc:MS.sc,o:MS.o,s:MS.s,over:MS.over,w:MS.w,res:MS.res,it:MS.it};applySnap(lastSnap,true)}
+  else if(lastSnap)applySnap(lastSnap,false);
+  sm.forEach(o=>{if(o.m.visible)o.m.position.lerp(o.tg,Math.min(1,dt*12))})}
+GM.push(
+{n:'Light Rush',g:'Multiplayer',mp:1,d:'Everyone fights for the same lights. Bump a leader to steal a point.',upd(){},
+ init(){if(isClient)return;for(let i=0;i<12;i++){const a=Math.random()*6.283,d=15+Math.random()*120,x=cl(Math.cos(a)*d),z=cl(Math.sin(a)*d);MS.e.push([0,x,h(x,z)+2,z,1])}MS.o='First to 10 lights wins. Bump the leader to steal a point.'},
+ sim(dt){const PL=allP();ensureSc(PL,0);MS.rt+=dt;
+  MS.e.forEach(e=>{for(const p of PL){if(Math.hypot(p.x-e[1],p.z-e[3])<3){MS.sc[p.id]++;const a=Math.random()*6.283,d=15+Math.random()*120;e[1]=cl(Math.cos(a)*d);e[3]=cl(Math.sin(a)*d);e[2]=h(e[1],e[3])+2;break}}});
+  for(let i=0;i<PL.length;i++)for(let j=i+1;j<PL.length;j++){const a=PL[i],b=PL[j];if(Math.hypot(a.x-b.x,a.z-b.z)<2&&MS.sc[a.id]!==MS.sc[b.id]){const hi=MS.sc[a.id]>MS.sc[b.id]?a:b,lo=hi===a?b:a;if(MS.rt>(MS.cdm[hi.id]||0)&&MS.sc[hi.id]>0){MS.sc[hi.id]--;MS.sc[lo.id]++;MS.cdm[hi.id]=MS.rt+2.5}}}
+  const top=topSc(),l=90-MS.rt;MS.s=`Leader ${top?nameOf(top[0]):''} ${top?top[1]:0}, ${l.toFixed(0)}s`;
+  if(top&&top[1]>=10)mpEnd(top[0],`${nameOf(top[0])} wins with ${top[1]} lights`);else if(l<=0)mpEnd(top?top[0]:'',top?`Time. ${nameOf(top[0])} leads with ${top[1]}`:'Time up')}},
+{n:'Hot Tag',g:'Multiplayer',mp:1,itLabel:'ARE IT',d:'One player is it. Touch someone to pass it on. You score every second you are not it.',upd(){},
+ init(){if(isClient)return;MS.o='Do not be it! Touch another player to pass it on.'},
+ sim(dt){const PL=allP();ensureSc(PL,0);if(PL.length<2){MS.s='Waiting for another player to join';return}
+  MS.rt+=dt;if(!PL.some(p=>p.id===MS.it))MS.it=PL[Math.floor(Math.random()*PL.length)].id;
+  const it=PL.find(p=>p.id===MS.it);
+  if(MS.rt>MS.cd)for(const p of PL){if(p!==it&&Math.hypot(p.x-it.x,p.z-it.z)<2.2){MS.it=p.id;MS.cd=MS.rt+1.5;break}}
+  MS.acc+=dt;if(MS.acc>=1){MS.acc-=1;PL.forEach(p=>{if(p.id!==MS.it)MS.sc[p.id]++})}
+  const l=60-MS.rt;MS.s=`${nameOf(MS.it)} is it, ${l.toFixed(0)}s`;
+  if(l<=0){const top=topSc();mpEnd(top[0],`${nameOf(top[0])} wins with ${top[1]} points`)}}},
+{n:'King of the Hill',g:'Multiplayer',mp:1,d:'Hold the glowing zone alone to score. If two players share it, nobody scores.',upd(){},
+ init(){if(isClient)return;MS.zt=0;mvz();MS.o='Stand in the zone alone to score. Shared zones score nothing.'},
+ sim(dt){const PL=allP();ensureSc(PL,0);MS.rt+=dt;MS.zt+=dt;if(MS.zt>15){MS.zt=0;mvz()}
+  const z=MS.e[0],ins=PL.filter(p=>Math.hypot(p.x-z[1],p.z-z[3])<14);
+  if(ins.length===1){MS.acc+=dt;if(MS.acc>=1){MS.acc-=1;MS.sc[ins[0].id]++}}
+  const l=75-MS.rt;MS.s=(ins.length>1?'Contested!':ins.length===1?`${nameOf(ins[0].id)} holds the hill`:'Zone empty')+`, ${l.toFixed(0)}s`;
+  if(l<=0){const top=topSc();mpEnd(top?top[0]:'',top?`${nameOf(top[0])} ruled the hill with ${top[1]}`:'No winner')}}},
+{n:'Team Defense',g:'Multiplayer',mp:1,d:'Everyone protects one beacon together. Touch each shadow to stop it.',upd(){},
+ init(){if(isClient)return;MS.hp=8;MS.sh=[];MS.sp=1;MS.o='Protect the beacon together for 60 seconds';MS.e.push([3,0,h(0,0)+30,0,1])},
+ sim(dt){const PL=allP();ensureSc(PL,0);MS.rt+=dt;MS.sp-=dt;const n=Math.max(1,PL.length);
+  if(MS.sp<=0){MS.sp=Math.max(.5,1.6/(1+.5*(n-1))-MS.rt*.01);const a=Math.random()*6.283;MS.sh.push({x:Math.cos(a)*75,z:Math.sin(a)*75})}
+  const sp2=4+MS.rt*.05;MS.sh=MS.sh.filter(q=>{const d=Math.hypot(q.x,q.z)||1;q.x-=q.x/d*sp2*dt;q.z-=q.z/d*sp2*dt;
+   for(const p of PL){if(Math.hypot(p.x-q.x,p.z-q.z)<2.6){MS.sc[p.id]++;return false}}
+   if(d<3.5){MS.hp--;return false}return true});
+  MS.e.length=1;MS.sh.forEach(q=>MS.e.push([1,q.x,h(q.x,q.z)+1.5,q.z,1]));
+  const l=60-MS.rt;MS.s=`Beacon ${MS.hp} of 8, ${l.toFixed(0)}s`;
+  if(MS.hp<=0)mpEnd('','The beacon fell');else if(l<=0)mpEnd('*','Team wins! The beacon held')}},
+{n:'Hot Potato',g:'Multiplayer',mp:1,itLabel:'HAVE THE BOMB',d:'Pass the bomb by touching another player before it blows. Two lives each.',upd(){},
+ init(){if(isClient)return;MS.fuse=0;MS.o='Touch another player to pass the bomb. Two lives each.'},
+ sim(dt){const PL=allP();ensureSc(PL,2);if(PL.length<2){MS.s='Waiting for another player to join';return}
+  MS.rt+=dt;const alive=PL.filter(p=>MS.sc[p.id]>0);
+  if(alive.length<=1){mpEnd(alive[0]?alive[0].id:'',alive[0]?`${nameOf(alive[0].id)} survives!`:'Everyone is out');return}
+  if(!alive.some(p=>p.id===MS.it)){MS.it=alive[Math.floor(Math.random()*alive.length)].id;MS.fuse=12+Math.random()*8}
+  const b=alive.find(p=>p.id===MS.it);
+  if(MS.rt>MS.cd)for(const p of alive){if(p!==b&&Math.hypot(p.x-b.x,p.z-b.z)<2.2){MS.it=p.id;MS.cd=MS.rt+1.2;break}}
+  MS.fuse-=dt;if(MS.fuse<=0){MS.sc[MS.it]--;MS.it='';MS.s='BOOM!'}else MS.s=`${nameOf(MS.it)} has the bomb, ${Math.ceil(MS.fuse)}s`;
+  if(MS.rt>150){const top=topSc();mpEnd(top[0],`${nameOf(top[0])} wins on lives`)}}}
+);
+
 applyWorld(0);
 function tick(){
   const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
@@ -538,7 +685,7 @@ function tick(){
   }
   const gy=h(pos.x,pos.z)+1.7;pos.y+=(gy-pos.y)*Math.min(1,dt*12);
   cam.position.copy(pos);cam.position.y+=jy;cam.rotation.set(pitch,yaw,0);
-  gameTick(dt,t);sceneryTick(dt,t);netTick(dt);orbs.forEach((o,i)=>{
+  gameTick(dt,t);sceneryTick(dt,t);mpTick(dt,t);netTick(dt);orbs.forEach((o,i)=>{
     if(!o.visible)return;
     o.position.y=o.userData.base+Math.sin(t*1.6+i)*.35;
     if(o.position.distanceTo(cam.position)<3){o.visible=false;found++;nEl.textContent=found;
