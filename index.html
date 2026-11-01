@@ -55,6 +55,11 @@ html,body{position:fixed;inset:0;width:100%;overscroll-behavior:none;-webkit-use
 details#settings{margin:12px 0;border:1px solid #4a3a6c;border-radius:10px;padding:4px 14px 8px;background:#1b1436}
 details#settings summary{cursor:pointer;font-weight:600;padding:8px 0;color:#9fe9d8}
 .chud #hud,.chud #sb,.chud #modeLbl,.chud #xh,.chud #itv,.chud #blk{display:none!important}
+#mapBox{border:1px solid #4a3a6c;border-radius:8px;margin:10px 0 4px;padding:6px 10px}#mapBox legend{color:#9fe9d8;padding:0 6px}
+#mapBox input[type=text],#mapBox input[type=number]{font:inherit;color:#f3e9ff;background:#1b1436;border:1px solid #6b4f7a;border-radius:6px;padding:5px 8px;width:100%}
+#mapBox button{font:inherit;color:#f3e9ff;background:#1b1436;border:1px solid #6b4f7a;border-radius:6px;padding:6px 10px;cursor:pointer}
+.mrow{display:flex;gap:8px;flex-wrap:wrap}.mrow label{flex:1;min-width:110px}.mtog{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.mtog label{font-size:.85rem;margin:3px 0}
+#mapSt{font-size:.85rem;color:#d6c8f0;margin:8px 0 2px}.mattr{font-size:.75rem;color:#a9a2cf;margin:2px 0}
 </style>
 </head>
 <body>
@@ -80,6 +85,18 @@ details#settings summary{cursor:pointer;font-weight:600;padding:8px 0;color:#9fe
 <label><input id="swapC" type="checkbox"> Swap eyes</label>
 <label><input id="hudC" type="checkbox" checked> Show text in both eyes (3D views)</label>
 <p>Keys: <b>M</b> changes the 3D view, <b>[</b> and <b>]</b> change depth.</p>
+<fieldset id="mapBox"><legend>Real-world map</legend>
+<label><input type="checkbox" id="mapOn"> Use real-world map (OpenStreetMap)</label>
+<label>Address or place <input id="mapAddr" type="text" list="mapPre" placeholder="Search an address or place"></label>
+<datalist id="mapPre"><option value="Times Square, New York"><option value="Piazza San Marco, Venice"><option value="Shibuya Crossing, Tokyo"><option value="Place de la Concorde, Paris"><option value="Union Square, San Francisco"><option value="Trafalgar Square, London"></datalist>
+<div class="mrow"><label>Latitude <input id="mapLat" type="number" step="0.00001" value="40.75800"></label><label>Longitude <input id="mapLon" type="number" step="0.00001" value="-73.98550"></label></div>
+<label>Radius <input id="mapR" type="range" min="80" max="240" step="10" value="160"> <span id="mapRv">160 m</span></label>
+<div class="mrow"><button id="mapFind" type="button">Find address</button><button id="mapLoad" type="button">Load / reload</button><button id="mapClr" type="button">Clear cache</button></div>
+<div class="mtog"><label><input type="checkbox" id="mapB" checked> Buildings</label><label><input type="checkbox" id="mapRd" checked> Roads</label><label><input type="checkbox" id="mapSd" checked> Sidewalks and crossings</label><label><input type="checkbox" id="mapMk" checked> Road markings</label><label><input type="checkbox" id="mapWt" checked> Water and parks</label><label><input type="checkbox" id="mapTr" checked> Trees</label><label><input type="checkbox" id="mapTe" checked> Terrain elevation</label><label><input type="checkbox" id="mapCo" checked> Building collision</label></div>
+<label>Import OSM JSON file <input id="mapFile" type="file" accept=".json,.geojson"></label>
+<p id="mapSt">Map is off. Turn it on to load the location above.</p>
+<p class="mattr">Map data from OpenStreetMap contributors (ODbL). Elevation by Open-Meteo. Needs internet, so use the GitHub Pages version.</p>
+</fieldset>
 </details></div>
 </div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -100,8 +117,8 @@ addEventListener('orientationchange',()=>setTimeout(()=>{size();rebuild()},350))
 const hemi=new THREE.HemisphereLight(0xb79cff,0x4a3a5c,0.9);S.add(hemi);
 const sun=new THREE.DirectionalLight(0xff9f7a,1.1);sun.position.set(-60,18,-40);S.add(sun);
 
-let TA=1,TK=1,PK=null;
-const h=(x,z)=>(Math.sin(x*.05*TK)*Math.cos(z*.04*TK)*2.4+Math.sin(x*.13*TK+z*.09*TK)*.6)*TA+(PK?PK.H*Math.exp(-(((x-PK.x)*(x-PK.x)+(z-PK.z)*(z-PK.z))/(PK.r*PK.r))):0);
+let TA=1,TK=1,PK=null,MAPH=null;
+const h=(x,z)=>MAPH?MAPH(x,z):(Math.sin(x*.05*TK)*Math.cos(z*.04*TK)*2.4+Math.sin(x*.13*TK+z*.09*TK)*.6)*TA+(PK?PK.H*Math.exp(-(((x-PK.x)*(x-PK.x)+(z-PK.z)*(z-PK.z))/(PK.r*PK.r))):0);
 const g=new THREE.PlaneGeometry(500,500,150,150);g.rotateX(-Math.PI/2);
 const p=g.attributes.position;
 for(let i=0;i<p.count;i++)p.setY(i,h(p.getX(i),p.getZ(i)));
@@ -291,9 +308,9 @@ const gsel=document.getElementById('gameSel'),gd=document.getElementById('gdesc'
 const obj=s=>{objE.textContent=sw(s)},st=s=>{statE.textContent=sw(s)},T=s=>s.toFixed(1)+'s';
 let G={},ents=[],gi=0;
 function ball(c,r){const m=new THREE.Mesh(new THREE.SphereGeometry(r,16,16),new THREE.MeshBasicMaterial({color:c,fog:false}));m.add(new THREE.Mesh(new THREE.SphereGeometry(r*2.2,16,16),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.2,fog:false})));S.add(m);return m}
-function put(m,x,z,up){m.position.set(x,h(x,z)+(up===undefined?(WF==='swim'?2+Math.random()*14:2):up),z);m.userData.b=m.position.y;m.visible=true}
+function put(m,x,z,up){if(MAP.active&&!mapFree(x,z,1.5)){const q=mapFreeNear(x,z,1.5);x=q[0];z=q[1]}m.position.set(x,h(x,z)+(up===undefined?(WF==='swim'?2+Math.random()*14:2):up),z);m.userData.b=m.position.y;m.visible=true}
 const cl=v=>Math.max(-230,Math.min(230,v));
-function rp(a0,a1){const a=Math.random()*6.283,d=a0+Math.random()*(a1-a0);return [cl(pos.x+Math.cos(a)*d),cl(pos.z+Math.sin(a)*d)]}
+function rp(a0,a1){let x=0,z=0;for(let k=0;k<40;k++){const a=Math.random()*6.283,d=a0+Math.random()*(a1-a0);x=cl(pos.x+Math.cos(a)*d);z=cl(pos.z+Math.sin(a)*d);if(!MAP.active||mapFree(x,z,2.5))break}return [x,z]}
 function lights(n){for(let i=0;i<n;i++){const b=ball(P.good,.7);put(b,...rp(25,170));ents.push(b)}}
 function spawn1(){const b=ball(P.good,.7);put(b,...rp(50,110));ents.push(b)}
 function bob(t){ents.forEach((m,i)=>{if(m.visible&&m.userData.b!==undefined)m.position.y=m.userData.b+Math.sin(t*1.6+i)*.35})}
@@ -303,7 +320,7 @@ function flyStep(dt,t,c,sp){ents.forEach((m,i)=>{const u=m.userData,p=m.position
 function rings(n){const L=[];let px=0,pz=0,a=Math.random()*6.28;for(let i=0;i<n;i++){a+=(Math.random()-.5)*1.6;px=cl(px+Math.cos(a)*(45+Math.random()*30));pz=cl(pz+Math.sin(a)*(45+Math.random()*30));const r=new THREE.Mesh(new THREE.TorusGeometry(3.2,.35,12,32),new THREE.MeshBasicMaterial({color:P.ring,transparent:true,fog:false}));r.position.set(px,h(px,pz)+3,pz);r.rotation.y=a+1.57;S.add(r);ents.push(r);L.push(r)}return L}
 function ringStep(L,i){L.forEach((r,k)=>{r.visible=k===i||k===i+1;r.material.opacity=k===i?1:.25;r.rotation.z+=.02})}
 function mvZone(){const [x,z]=rp(45,90);G.z.position.set(x,h(x,z)+6,z)}
-function pillar(x,z,r,hh,c,o){const b=new THREE.Mesh(new THREE.CylinderGeometry(r,r,hh,24,1,true),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o,side:2,fog:false}));b.position.set(x,h(x,z)+hh/2,z);S.add(b);ents.push(b);return b}
+function pillar(x,z,r,hh,c,o){if(MAP.active&&r<=6&&!mapFree(x,z,r+1)){const q=mapFreeNear(x,z,r+1);x=q[0];z=q[1]}const b=new THREE.Mesh(new THREE.CylinderGeometry(r,r,hh,24,1,true),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o,side:2,fog:false}));b.position.set(x,h(x,z)+hh/2,z);S.add(b);ents.push(b);return b}
 const GM=[
 {n:'Light Hunt',d:'Find all 7 scattered lights.',init(){lights(7);obj('Find all 7 lights')},
  upd(dt,t){bob(t);grab(3,m=>{m.visible=false;G.n++});st(`Found ${G.n} of 7, ${T(G.t)}`);if(G.n>=7)end(1,`All lights found in ${T(G.t)}`)}},
@@ -344,7 +361,7 @@ const GM=[
 ];
 function end(win,txt){if(G.over)return;G.over=true;stinger(win);G.res=(win?'':'out: ')+sw(txt);objE.innerHTML=(win?'Win: ':'Game over: ')+sw(txt)+'<br><small>Press R to play again</small>'}
 function start(i,sd){ents.forEach(e=>S.remove(e));ents=[];(G.mt||[]).forEach(o=>{S.remove(o.m);S.remove(o.k)});(G.e||[]).forEach(m=>S.remove(m));(G.gl||[]).forEach(m=>{S.remove(m);S.remove(m.userData.k)});gi=i;gsel.value=i;G={t:0,n:0,over:false,mt:[]};pos.set(0,0,0);yaw=0;pitch=0;for(let i=rocks.length-1;i>=0;i--)if(rocks[i].tmp)rocks.splice(i,1);plats.length=0;GMUL=1;frz=false;blk.style.display='none';hemi.intensity=.9;S.fog.density=WORLDS[wi].fog[1];if(shaped){shaped=false;PK=null;const w0=WORLDS[wi];reshape(w0.ta===undefined?1:w0.ta,w0.tk===undefined?1:w0.tk)}
-  pickPrompted=false;sfxReset();smClear();resetMS();lastSnap=null;jy=0;vy=0;vx=0;vz=0;{const R0=Math.random;if(sd!==undefined){curSeed=sd;seedRng(sd)}GM[i].init();if(sd!==undefined)seedRng((sd+7)>>>0);decor(GM[i]);Math.random=R0}spread();gd.textContent=sw(GM[i].d)+' '+WORLDS[wi].t;st('');xh.style.display=GM[i].aim?'block':'none';gridDraw()}
+  pickPrompted=false;sfxReset();smClear();resetMS();lastSnap=null;jy=0;vy=0;vx=0;vz=0;{const R0=Math.random;if(sd!==undefined){curSeed=sd;seedRng(sd)}GM[i].init();if(sd!==undefined)seedRng((sd+7)>>>0);decor(GM[i]);Math.random=R0}spread();gd.textContent=sw(GM[i].d)+' '+WORLDS[wi].t+(MAP.note?' '+MAP.note:'');st('');xh.style.display=GM[i].aim?'block':'none';gridDraw()}
 function gameTick(dt,t){if(G.over||!locked)return;G.t+=dt;GM[gi].upd(dt,t)}
 const D={lights:'lights',light:'light',fireflies:'fireflies',firefly:'firefly',shadow:'shadow',ghost:'ghost',meteors:'meteors',meteor:'meteor',stones:'stones',stone:'stone',beacon:'beacon',teal:'teal',red:'red',pink:'pink'};
 const WORLDS=[
@@ -357,7 +374,7 @@ const WORLDS=[
 let P=WORLDS[0].P,W=D;
 const wsel=document.getElementById('worldSel');
 const sw=s=>s.replace(/\b(lights?|fireflies|firefly|shadow|ghost|meteors?|stones?|beacon|teal|red|pink)\b/gi,m=>{const v=W[m.toLowerCase()]||m.toLowerCase();return m[0]===m[0].toUpperCase()?v[0].toUpperCase()+v.slice(1):v});
-function applyWorld(i,g,sd){wi=i;const w=WORLDS[i];P=w.P;W={...D,...w.w};S.background.setHex(w.bg);S.fog.color.setHex(w.fog[0]);S.fog.density=w.fog[1];groundM.color.setHex(w.gr);hemi.color.setHex(w.hs[0]);hemi.groundColor.setHex(w.hs[1]);sun.color.setHex(w.sun[0]);sun.intensity=w.sun[1];rm.color.setHex(w.rock[0]);rm.emissive.setHex(w.rock[1]);pool.material.color.setHex(w.pool);starP.visible=w.stars>0;starP.material.size=1.6*w.stars;wsel.value=i;gsel.innerHTML='';GM.forEach((g,j)=>gsel.add(new Option(sw(g.n),j)));reshape(w.ta===undefined?1:w.ta,w.tk===undefined?1:w.tk);scenery(i);start(g===undefined?gi:g,sd)}
+function applyWorld(i,g,sd){wi=i;const w=WORLDS[i];P=w.P;W={...D,...w.w};S.background.setHex(w.bg);S.fog.color.setHex(w.fog[0]);S.fog.density=w.fog[1];groundM.color.setHex(w.gr);hemi.color.setHex(w.hs[0]);hemi.groundColor.setHex(w.hs[1]);sun.color.setHex(w.sun[0]);sun.intensity=w.sun[1];rm.color.setHex(w.rock[0]);rm.emissive.setHex(w.rock[1]);pool.material.color.setHex(w.pool);starP.visible=w.stars>0;starP.material.size=1.6*w.stars;wsel.value=i;gsel.innerHTML='';GM.forEach((g,j)=>gsel.add(new Option(sw(g.n),j)));mapPre(g===undefined?gi:g);reshape(w.ta===undefined?1:w.ta,w.tk===undefined?1:w.tk);scenery(i);mapPost();start(g===undefined?gi:g,sd)}
 WORLDS.forEach((w,i)=>wsel.add(new Option(w.n,i)));wsel.onchange=()=>choose(+wsel.value,undefined);
 gsel.onchange=()=>choose(undefined,+gsel.value);
 addEventListener('keydown',e=>{if(e.code==='KeyR')restart()});
@@ -419,7 +436,7 @@ function seedNow(){if(isHost)return curSeed=Math.floor(Math.random()*1e9)}
 function order(){return ['host',...conns.map(c=>c.peer)]}
 function advance(){const o=order();pk=o[(o.indexOf(pk)+1)%o.length]}
 function nameOf(id){if(id===myId())return mn();const s=remote[id];return s?String(s.n||'Player').slice(0,12):'host'}
-function cfgMsg(){return{t:'cfg',w:+wsel.value,g:gi,s:curSeed,pk}}
+function cfgMsg(){return{t:'cfg',w:+wsel.value,g:gi,s:curSeed,pk,map:MAP.on&&MAP.ready?{lat:MAP.lat,lon:MAP.lon,R:MAP.R,terr:MAP.opt.terr}:null}}
 function bcast(){if(!isHost)return;lockPick(pk!=='host');conns.forEach(c=>c.open&&c.send(cfgMsg()))}
 function choose(w,g){w=w===undefined?wi:w;g=g===undefined?gi:g;
   if(isClient){if(pk===uid&&hostConn&&hostConn.open){hostConn.send({t:'pick',w,g});lockPick(true)}return}
@@ -439,7 +456,7 @@ function joinGame(){const c=document.getElementById('mpCode').value.trim().toUpp
     const to=setTimeout(()=>{if(!isClient)say('Could not reach that game.')},9000);
     hostConn.on('open',()=>{clearTimeout(to);isClient=true;lockPick(true);gridDraw();say('Joined game '+c+'. The host picks world and game.')});
     hostConn.on('data',d=>{if(!d)return;
-      if(d.t==='cfg'&&isFinite(+d.w)&&isFinite(+d.g)&&WORLDS[+d.w]&&GM[+d.g]){curSeed=+d.s;pk=String(d.pk||'host');applyWorld(+d.w,+d.g,curSeed);lockPick(pk!==uid)}
+      if(d.t==='cfg'&&isFinite(+d.w)&&isFinite(+d.g)&&WORLDS[+d.w]&&GM[+d.g]){curSeed=+d.s;pk=String(d.pk||'host');mapSync(d.map).then(()=>{applyWorld(+d.w,+d.g,curSeed);lockPick(pk!==uid)})}
       if(d.ms)lastSnap=d.ms;if(d.t==='st'&&d.p){remote={};Object.entries(d.p).forEach(([k,v])=>{if(k!==uid)remote[k]=v})}});
     hostConn.on('close',()=>{isClient=false;remote={};lockPick(false);gridDraw();say('The host left.')})}))return}
 document.getElementById('mpHost').onclick=hostGame;document.getElementById('mpJoin').onclick=joinGame;
@@ -655,9 +672,9 @@ function mpTick(dt,t){const gm=GM[gi];if(!gm||!gm.mp)return;
   sm.forEach(o=>{if(o.m&&o.m.visible)o.m.position.lerp(o.tg,Math.min(1,dt*12))})}
 GM.push(
 {n:'Light Rush',g:'Multiplayer',mp:1,d:'Everyone fights for the same lights. Bump a leader to steal a point.',upd(){},
- init(){if(isClient)return;for(let i=0;i<12;i++){const a=Math.random()*6.283,d=15+Math.random()*120,x=cl(Math.cos(a)*d),z=cl(Math.sin(a)*d);MS.e.push([0,x,h(x,z)+2,z,1])}MS.o='First to 10 lights wins. Bump the leader to steal a point.'},
+ init(){if(isClient)return;for(let i=0;i<12;i++){const a=Math.random()*6.283,d=15+Math.random()*120,q=mapFreeNear(cl(Math.cos(a)*d),cl(Math.sin(a)*d),2),x=q[0],z=q[1];MS.e.push([0,x,h(x,z)+2,z,1])}MS.o='First to 10 lights wins. Bump the leader to steal a point.'},
  sim(dt){const PL=allP();ensureSc(PL,0);MS.rt+=dt;
-  MS.e.forEach(e=>{for(const p of PL){if(Math.hypot(p.x-e[1],p.z-e[3])<3){MS.sc[p.id]++;const a=Math.random()*6.283,d=15+Math.random()*120;e[1]=cl(Math.cos(a)*d);e[3]=cl(Math.sin(a)*d);e[2]=h(e[1],e[3])+2;break}}});
+  MS.e.forEach(e=>{for(const p of PL){if(Math.hypot(p.x-e[1],p.z-e[3])<3){MS.sc[p.id]++;const a=Math.random()*6.283,d=15+Math.random()*120;{const q=mapFreeNear(cl(Math.cos(a)*d),cl(Math.sin(a)*d),2);e[1]=q[0];e[3]=q[1]}e[2]=h(e[1],e[3])+2;break}}});
   for(let i=0;i<PL.length;i++)for(let j=i+1;j<PL.length;j++){const a=PL[i],b=PL[j];if(Math.hypot(a.x-b.x,a.z-b.z)<2&&MS.sc[a.id]!==MS.sc[b.id]){const hi=MS.sc[a.id]>MS.sc[b.id]?a:b,lo=hi===a?b:a;if(MS.rt>(MS.cdm[hi.id]||0)&&MS.sc[hi.id]>0){MS.sc[hi.id]--;MS.sc[lo.id]++;MS.cdm[hi.id]=MS.rt+2.5}}}
   const top=topSc(),l=90-MS.rt;MS.s=`Leader ${top?nameOf(top[0]):''} ${top?top[1]:0}, ${l.toFixed(0)}s`;
   if(top&&top[1]>=10)mpEnd(top[0],`${nameOf(top[0])} wins with ${top[1]} lights`);else if(l<=0)mpEnd(top?top[0]:'',top?`Time. ${nameOf(top[0])} leads with ${top[1]}`:'Time up')}},
@@ -705,8 +722,8 @@ const ARR=['\u2191','\u2196','\u2190','\u2199','\u2193','\u2198','\u2192','\u219
 function dir(x,z){const dx=x-pos.x,dz=z-pos.z;let r=Math.atan2(-dx,-dz)-yaw;r=Math.atan2(Math.sin(r),Math.cos(r));return ARR[((Math.round(r/(Math.PI/4))%8)+8)%8]+' '+Math.hypot(dx,dz).toFixed(0)+'m'}
 function setShape(a,k){shaped=true;reshape(a,k)}
 function solid(x,z,r){const e={x,z,r,tmp:1};rocks.push(e);return e}
-function box(x,z,w,hh,d,c,sol,y0){const m=new THREE.Mesh(new THREE.BoxGeometry(w,hh,d),new THREE.MeshLambertMaterial({color:c}));m.position.set(x,(y0===undefined?h(x,z):y0)+hh/2-.2,z);S.add(m);ents.push(m);if(sol)m.userData.rk=solid(x,z,Math.max(w,d)/2+.7);return m}
-function tree(x,z,c){const g2=new THREE.Group(),t=new THREE.Mesh(new THREE.CylinderGeometry(.4,.6,4,6),new THREE.MeshLambertMaterial({color:0x5a3b22})),l=new THREE.Mesh(new THREE.ConeGeometry(2.6,7,7),new THREE.MeshLambertMaterial({color:c||0x2f7d4a}));t.position.y=2;l.position.y=7;g2.add(t,l);g2.position.set(x,h(x,z),z);S.add(g2);ents.push(g2);g2.userData.rk=solid(x,z,1.4);return g2}
+function box(x,z,w,hh,d,c,sol,y0){if(MAP.active&&y0===undefined&&!mapFree(x,z,Math.max(w,d)/2+1)){const q=mapFreeNear(x,z,Math.max(w,d)/2+1);x=q[0];z=q[1]}const m=new THREE.Mesh(new THREE.BoxGeometry(w,hh,d),new THREE.MeshLambertMaterial({color:c}));m.position.set(x,(y0===undefined?h(x,z):y0)+hh/2-.2,z);S.add(m);ents.push(m);if(sol)m.userData.rk=solid(x,z,Math.max(w,d)/2+.7);return m}
+function tree(x,z,c){if(MAP.active&&!mapFree(x,z,2)){const q=mapFreeNear(x,z,2);x=q[0];z=q[1]}const g2=new THREE.Group(),t=new THREE.Mesh(new THREE.CylinderGeometry(.4,.6,4,6),new THREE.MeshLambertMaterial({color:0x5a3b22})),l=new THREE.Mesh(new THREE.ConeGeometry(2.6,7,7),new THREE.MeshLambertMaterial({color:c||0x2f7d4a}));t.position.y=2;l.position.y=7;g2.add(t,l);g2.position.set(x,h(x,z),z);S.add(g2);ents.push(g2);g2.userData.rk=solid(x,z,1.4);return g2}
 function tagS(txt,sc){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.font='bold 30px sans-serif';x.textAlign='center';x.lineWidth=5;x.strokeStyle='#000';x.strokeText(txt,128,42);x.fillStyle='#fff';x.fillText(txt,128,42);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),fog:false}));sp.scale.set(sc||6,(sc||6)/4,1);S.add(sp);ents.push(sp);return sp}
 function consume(m){m.visible=false;if(m.userData.rk){const i=rocks.indexOf(m.userData.rk);if(i>=0)rocks.splice(i,1)}}
@@ -729,7 +746,7 @@ const NEW=[
   st(`${G.n} of 5 chests, ${bm.userData.p>0?'digging '+Math.round(bm.userData.p/2.5*100)+'%':'nearest chest '+dir(bm.position.x,bm.position.z)}, ${T(G.t)}`)}},
 {n:'Escape the Forest',g:'Open World',d:'Thick fog and trees. Follow the trail markers to the exit gate before time runs out.',
  init(){S.fog.density=.03;for(let i=0;i<110;i++){const a=Math.random()*6.283,d=8+Math.random()*190;tree(cl(Math.cos(a)*d),cl(Math.sin(a)*d))}
-  G.mk=[];let x=0,z=0,a=Math.random()*6.283;for(let i=0;i<5;i++){a+=(Math.random()-.5)*1.2;const d=i?55:30;x=cl(x+Math.cos(a)*d);z=cl(z+Math.sin(a)*d);const m=pillar(x,z,.6,18,i===4?P.zone:P.beam,.8);m.material.fog=true;m.material.needsUpdate=true;m.userData.x=x;m.userData.z=z;G.mk.push(m)}G.i=0;obj('Reach each trail marker in order. The last one is the exit gate.')},
+  G.mk=[];let x=0,z=0,a=Math.random()*6.283;for(let i=0;i<5;i++){a+=(Math.random()-.5)*1.2;const d=i?55:30;x=cl(x+Math.cos(a)*d);z=cl(z+Math.sin(a)*d);const m=pillar(x,z,.6,18,i===4?P.zone:P.beam,.8);m.material.fog=true;m.material.needsUpdate=true;m.userData.x=m.position.x;m.userData.z=m.position.z;G.mk.push(m)}G.i=0;obj('Reach each trail marker in order. The last one is the exit gate.')},
  upd(){G.mk.forEach((q,k)=>{q.visible=k===G.i});const m=G.mk[G.i];if(Math.hypot(pos.x-m.userData.x,pos.z-m.userData.z)<4){G.i++;if(G.i>=5){end(1,`Escaped the forest in ${T(G.t)}`);return}}
   const l=170-G.t,q=G.mk[G.i];st(`Marker ${G.i+1} of 5: ${dir(q.userData.x,q.userData.z)}, ${l.toFixed(0)}s left`);if(l<=0)end(0,'Lost in the forest')}},
 {n:'Lost Explorer',g:'Open World',d:'Cross the trapped floor of an ancient temple to reach the artifact. Safe tiles are hidden, so remember them.',
@@ -866,7 +883,7 @@ const NEW=[
   const alive=PL.filter(p=>!MS.x.out[p.id]);MS.s=`${alive.length} alive, lava ${Math.max(0,lv).toFixed(0)}m, ${Math.round(MS.rt)}s`;
   if((PL.length>1&&alive.length<=1)||(PL.length===1&&!alive.length)||MS.rt>140){const top=topSc();mpEnd(alive.length===1?alive[0].id:top[0],`${nameOf(alive.length===1?alive[0].id:top[0])} outlasted the lava`)}}}
 ];
-function trItem(t){const a=Math.random()*6.283,d=15+Math.random()*120;return{t,x:cl(Math.cos(a)*d),z:cl(Math.sin(a)*d),v:t===0?1:t===5?3:5,life:t===6?18:1e9}}
+function trItem(t){const a=Math.random()*6.283,d=15+Math.random()*120,q=mapFreeNear(cl(Math.cos(a)*d),cl(Math.sin(a)*d),2);return{t,x:q[0],z:q[1],v:t===0?1:t===5?3:5,life:t===6?18:1e9}}
 const DROP=new Set(['Time Trial','Beeline','Ghost Race','Shadow Chase','Firefly Catch','Shy Lights','Pick & Avoid','Delivery','Dot Eater','Tag','Ring Run','Rally','Monolith Tour','Pop-Up','Gaze Gallery','Photo Safari','Gift Catch']);
 GM.push(...NEW);
 {const ORDER=['Treasure Island','Escape the Forest','Lost Explorer','Delivery Driver','Zombie Escape','Mountain Climber','Alien Planet','Bank Robbery Escape','Island Survival','Mystery Village','Hide & Seek','Obstacle Race','King of the Hill','Treasure Rush','Rising Lava','Hot Tag','Team Defense','Hot Potato','Light Rush','Light Hunt','Hot & Cold','Statues','Capture the Flag'];
@@ -958,9 +975,9 @@ function house(x,z,w,hh,c){const g2=new THREE.Group(),b=new THREE.Mesh(new THREE
 const DEC={'Zen Wander':'zen','Light Hunt':'forest','Hot & Cold':'both','Statues':'both','Capture the Flag':'both','Safe Zone':'forest','Meteor Dodge':'forest','Demolition':'town','Herding':'forest','Beacon Defense':'forest','King of the Hill':'both','Treasure Rush':'forest','Hot Tag':'both','Team Defense':'forest','Hot Potato':'both','Light Rush':'forest','Mountain Climber':'forest','Zombie Escape':'town'};
 GM.forEach(g=>{if(DEC[g.n])g.decor=DEC[g.n]});
 function decor(g){const d=g.decor;if(!d)return;const nt=d==='zen'?70:d==='town'?0:d==='both'?36:45,nh=d==='zen'?14:d==='town'?9:d==='both'?8:0;
-  const free=(x,z,r)=>Math.hypot(x,z)>16&&!ents.some(e=>e.position&&Math.hypot(e.position.x-x,e.position.z-z)<r),tc=TREEC[wi]||0x2f7d4a,hc=HOUSEC[wi]||0x8a7a9a;
-  for(let i=0,k=0;i<nt&&k<500;k++){const a=Math.random()*6.283,r=16+Math.random()*170,x=cl(Math.cos(a)*r),z=cl(Math.sin(a)*r);if(free(x,z,5)){tree(x,z,tc);i++}}
-  for(let i=0,k=0;i<nh&&k<500;k++){const a=Math.random()*6.283,r=22+Math.random()*160,x=cl(Math.cos(a)*r),z=cl(Math.sin(a)*r),w=7+Math.random()*5;if(free(x,z,w+6)){house(x,z,w,5+Math.random()*5,hc);i++}}}
+  const free=(x,z,r)=>Math.hypot(x,z)>16&&(!MAP.active||mapFree(x,z,3))&&!ents.some(e=>e.position&&Math.hypot(e.position.x-x,e.position.z-z)<r),tc=TREEC[wi]||0x2f7d4a,hc=HOUSEC[wi]||0x8a7a9a;
+  for(let i=0,k=0;i<(MAP.active&&d!=='zen'?0:nt)&&k<500;k++){const a=Math.random()*6.283,r=16+Math.random()*170,x=cl(Math.cos(a)*r),z=cl(Math.sin(a)*r);if(free(x,z,5)){tree(x,z,tc);i++}}
+  for(let i=0,k=0;i<(MAP.active?0:nh)&&k<500;k++){const a=Math.random()*6.283,r=22+Math.random()*160,x=cl(Math.cos(a)*r),z=cl(Math.sin(a)*r),w=7+Math.random()*5;if(free(x,z,w+6)){house(x,z,w,5+Math.random()*5,hc);i++}}}
 // ---- HUD text drawn into both eyes in 3D views ----
 const hudCv=document.createElement('canvas'),hudX=hudCv.getContext('2d'),hudTex=new THREE.CanvasTexture(hudCv);hudTex.minFilter=THREE.LinearFilter;hudTex.generateMipmaps=false;U.tH.value=hudTex;
 const hudC=document.getElementById('hudC'),hudEl=document.getElementById('hud');
@@ -982,6 +999,182 @@ function hudDraw(){const k=1024/Math.max(innerWidth,innerHeight),cw=Math.round(i
   hudTex.needsUpdate=true}
 function nameTex(n){const c=document.createElement('canvas');c.width=384;c.height=96;const x=c.getContext('2d');x.font='bold 46px "Avenir Next","Segoe UI",sans-serif';x.textAlign='center';x.lineJoin='round';x.lineWidth=9;x.strokeStyle='rgba(0,0,0,.9)';x.strokeText(n,192,60);x.fillStyle='#fff';x.fillText(n,192,60);const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t}
 
+// ---- real-world map layer (OpenStreetMap): data, geometry, collision ----
+const MAP={on:false,ready:false,active:false,loading:false,note:'',lat:40.758,lon:-73.9855,R:160,
+ opt:{bld:true,road:true,side:true,mark:true,water:true,tree:true,terr:true,coll:true},F:null,hf:null,grp:null,col:null,stat:'',shift:[0,0]};
+const LATM=p=>111132.92-559.82*Math.cos(2*p)+1.175*Math.cos(4*p),LONM=p=>111412.84*Math.cos(p)-93.5*Math.cos(3*p);
+function proj(lat,lon,o){const p=o.lat*Math.PI/180;return[(lon-o.lon)*LONM(p),-(lat-o.lat)*LATM(p)]}
+const pipR=(x,z,r)=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const a=r[i],b=r[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c}return c};
+function ringArea(r){let a=0;for(let i=0;i<r.length;i++){const p=r[i],q=r[(i+1)%r.length];a+=p[0]*q[1]-q[0]*p[1]}return Math.abs(a)/2}
+function cleanRing(r){const o=[];for(const p of r){const q=o[o.length-1];if(!q||Math.abs(p[0]-q[0])>.01||Math.abs(p[1]-q[1])>.01)o.push(p)}
+  if(o.length>1&&Math.abs(o[0][0]-o[o.length-1][0])<.01&&Math.abs(o[0][1]-o[o.length-1][1])<.01)o.pop();return o}
+function stitch(ws){const out=[],rest=ws.map(w=>w.slice()),eq=(a,b)=>Math.abs(a[0]-b[0])<.05&&Math.abs(a[1]-b[1])<.05;
+  while(rest.length){let cur=rest.shift(),guard=0;
+    while(!eq(cur[0],cur[cur.length-1])&&guard++<500){const e=cur[cur.length-1],k=rest.findIndex(w=>eq(w[0],e)||eq(w[w.length-1],e));if(k<0)break;const w=rest.splice(k,1)[0];if(!eq(w[0],e))w.reverse();cur=cur.concat(w.slice(1))}
+    out.push(cur)}return out}
+function parseH(v){if(v===undefined)return null;const m=String(v).match(/([\d.]+)\s*(m|ft|')?/i);if(!m)return null;let n=parseFloat(m[1]);if(!isFinite(n))return null;if(m[2]&&m[2].toLowerCase()!=='m')n*=.3048;return n}
+const RW={motorway:14,motorway_link:7,trunk:12,trunk_link:7,primary:11,primary_link:6,secondary:9.5,secondary_link:6,tertiary:8.5,tertiary_link:5.5,unclassified:7,residential:7,living_street:6,service:4,pedestrian:5,track:3.5,road:6,busway:6};
+const FW={footway:2,path:1.8,cycleway:2.2,steps:2,bridleway:2,corridor:2,platform:3};
+const BT={house:7,detached:7,semidetached_house:8,terrace:8,bungalow:5,residential:12,apartments:18,dormitory:14,hotel:25,commercial:14,retail:9,supermarket:8,office:22,industrial:9,warehouse:8,garage:3,garages:3,shed:3,roof:4,carport:3,church:16,chapel:9,cathedral:28,hospital:20,school:12,university:16,civic:14,public:12,train_station:12,stadium:20,hangar:14,parking:10,service:4,hut:3,kiosk:3,greenhouse:4,barn:7,farm_auxiliary:5,construction:8};
+function parseOSM(json,o){const F={bld:[],road:[],water:[],park:[],tree:[]},P=g=>g.map(q=>proj(q.lat,q.lon,o));
+  const rings=el=>{if(el.type==='way'&&el.geometry)return{outers:[P(el.geometry)],inners:[]};
+    if(el.type==='relation'&&el.members){const ow=[],iw=[];el.members.forEach(m=>{if(m.type==='way'&&m.geometry&&m.geometry.length>1)(m.role==='inner'?iw:ow).push(P(m.geometry))});return{outers:stitch(ow),inners:stitch(iw)}}return null};
+  for(const el of json.elements||[]){const t=el.tags||{};
+    if(el.type==='node'){if(t.natural==='tree'&&el.lat!==undefined)F.tree.push(proj(el.lat,el.lon,o));continue}
+    if(t.highway&&el.type==='way'&&el.geometry){if(t.tunnel==='yes'||t.tunnel==='building_passage'||t.tunnel==='culvert'||t.area==='yes')continue;F.road.push({pts:P(el.geometry),t});continue}
+    const isB=t.building||t['building:part'],isW=t.natural==='water'||t.waterway==='riverbank'||t.landuse==='reservoir',isP=t.leisure==='park'||t.leisure==='garden';
+    if(!isB&&!isW&&!isP)continue;const rg=rings(el);if(!rg)continue;
+    const inn=rg.inners.map(cleanRing).filter(r=>r.length>=3);
+    rg.outers.forEach(r0=>{const ring=cleanRing(r0);if(ring.length<3)return;const area=ringArea(ring);if(area<2)return;
+      const holes=inn.filter(h=>pipR(h[0][0],h[0][1],ring)),cx=ring.reduce((s,p)=>s+p[0],0)/ring.length,cz=ring.reduce((s,p)=>s+p[1],0)/ring.length;
+      (isB?F.bld:isW?F.water:F.park).push({ring,holes,t,area,cx,cz})})}
+  return F}
+function shiftF(F,sx,sz){const S=p=>[p[0]-sx,p[1]-sz],R=r=>r.map(S),I=b=>Object.assign({},b,{ring:R(b.ring),holes:b.holes.map(R),cx:b.cx-sx,cz:b.cz-sz});
+  return{bld:F.bld.map(I),water:F.water.map(I),park:F.park.map(I),road:F.road.map(r=>({pts:R(r.pts),t:r.t})),tree:F.tree.map(S)}}
+function nearestRoad(F){let best=null,bd=1e18;const scan=cls=>F.road.forEach(r=>{if(!(r.t.highway in cls))return;const p=r.pts;for(let i=0;i<p.length-1;i++){const ax=p[i][0],az=p[i][1],dx=p[i+1][0]-ax,dz=p[i+1][1]-az,l2=dx*dx+dz*dz||1;let t=(-ax*dx-az*dz)/l2;t=Math.max(0,Math.min(1,t));const qx=ax+dx*t,qz=az+dz*t,d=qx*qx+qz*qz;if(d<bd){bd=d;best=[qx,qz]}}});
+  scan(RW);if(!best)scan(FW);return best||[0,0]}
+function estimateHeights(B){const cell=60,g=new Map(),key=(x,z)=>Math.floor(x/cell)+','+Math.floor(z/cell);
+  B.forEach(b=>{const t=b.t;let h=parseH(t.height);if(h===null){const lv=parseFloat(t['building:levels']);if(isFinite(lv))h=lv*3.2+(parseH(t['roof:height'])||0)}
+    b.known=h!==null;b.h=h;if(b.known){const k=key(b.cx,b.cz);if(!g.has(k))g.set(k,[]);g.get(k).push(h)}
+    const mh=parseH(t.min_height),ml=parseFloat(t['building:min_level']);b.minh=mh!==null?mh:(ml>0?ml*3.2:0)});
+  B.forEach(b=>{if(b.known)return;const ty=b.t.building||b.t['building:part'];let h=BT[ty];if(h===undefined)h=b.area>2500?16:b.area>900?13:b.area>300?10:7;
+    let sum=0,n=0;const cx=Math.floor(b.cx/cell),cz=Math.floor(b.cz/cell);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const a=g.get((cx+i)+','+(cz+j));if(a)a.forEach(v=>{sum+=v;n++})}
+    if(n>=2){const w=(ty==='yes'||BT[ty]===undefined)?.65:.35;h=h*(1-w)+sum/n*w}b.h=Math.max(3,Math.min(250,h))});
+  B.forEach(b=>{b.h=Math.max(b.minh+2,Math.min(300,b.h))})}
+function mkTerrain(el,sx,sz){const n=el.n,half=el.half,v=el.vals;
+  const samp=(X,Z)=>{const u=Math.max(0,Math.min(n-1.0001,(X+half)/(2*half)*(n-1))),w=Math.max(0,Math.min(n-1.0001,(Z+half)/(2*half)*(n-1))),i=Math.floor(u),j=Math.floor(w),fu=u-i,fw=w-j;
+    return v[j*n+i]*(1-fu)*(1-fw)+v[j*n+i+1]*fu*(1-fw)+v[(j+1)*n+i]*(1-fu)*fw+v[(j+1)*n+i+1]*fu*fw};
+  const base=samp(sx,sz);return(x,z)=>samp(x+sx,z+sz)-base}
+// ---- merged geometry ----
+function GB(){return{p:[],n:[],c:[]}}
+function pushTri(B,a,b,c,nx,ny,nz,col){B.p.push(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2]);for(let i=0;i<3;i++){B.n.push(nx,ny,nz);B.c.push(col[0],col[1],col[2])}}
+function triUp(B,a,b,c,col){const ny=(b[2]-a[2])*(c[0]-a[0])-(b[0]-a[0])*(c[2]-a[2]);if(ny<0)pushTri(B,a,c,b,0,1,0,col);else pushTri(B,a,b,c,0,1,0,col)}
+function wallQuad(B,a,c,y0,y1,nx,nz,col){const A0=[a[0],y0,a[1]],C0=[c[0],y0,c[1]],C1=[c[0],y1,c[1]],A1=[a[0],y1,a[1]],dx=c[0]-a[0],dz=c[1]-a[1];
+  if(-dz*nx+dx*nz>=0){pushTri(B,A0,C0,C1,nx,0,nz,col);pushTri(B,A0,C1,A1,nx,0,nz,col)}else{pushTri(B,A0,C1,C0,nx,0,nz,col);pushTri(B,A0,A1,C1,nx,0,nz,col)}}
+function fillPoly(B,ring,holes,yf,col){const c2=ring.map(p=>new THREE.Vector2(p[0],p[1])),hs=holes.map(r=>r.map(p=>new THREE.Vector2(p[0],p[1])));let tr=[];try{tr=THREE.ShapeUtils.triangulateShape(c2,hs)}catch(e){}
+  const all=c2.concat(...hs);tr.forEach(t=>{const v=t.map(i=>[all[i].x,yf(all[i].x,all[i].y),all[i].y]);triUp(B,v[0],v[1],v[2],col)})}
+function addBuilding(B,b,hf){let y0=1e9;b.ring.forEach(p=>{y0=Math.min(y0,hf(p[0],p[1]))});const base=y0-1.2+b.minh,top=y0+b.h;if(top<=base+.5)return;
+  const j=((Math.abs(b.cx*7+b.cz*13)%10)/10-.5)*.06,cw=[.70+j,.72+j,.75+j],cr=[.82+j,.84+j,.86+j];
+  fillPoly(B,b.ring,b.holes,()=>top,cr);
+  const wall=(r,hole)=>{for(let i=0;i<r.length;i++){const a=r[i],c=r[(i+1)%r.length],dx=c[0]-a[0],dz=c[1]-a[1],l=Math.hypot(dx,dz);if(l<.05)continue;let nx=dz/l,nz=-dx/l;
+    const ins=pipR((a[0]+c[0])/2+nx*.15,(a[1]+c[1])/2+nz*.15,r);if(!(hole?ins:!ins)){nx=-nx;nz=-nz}wallQuad(B,a,c,base,top,nx,nz,cw)}};
+  wall(b.ring,false);b.holes.forEach(h=>wall(h,true))}
+function resample(pts,step){const o=[pts[0]];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],l=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.ceil(l/step));for(let k=1;k<=n;k++)o.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n])}return o}
+function ribbon(B,pts,w,off,yo,col,hf){const P=resample(pts,7),n=P.length;if(n<2)return;const L=[],Rr=[];
+  for(let i=0;i<n;i++){const a=P[Math.max(0,i-1)],b=P[Math.min(n-1,i+1)];let tx=b[0]-a[0],tz=b[1]-a[1];const l=Math.hypot(tx,tz)||1;tx/=l;tz/=l;const nx=-tz,nz=tx;let sc=1;
+    if(i>0&&i<n-1){const p=P[i-1],q=P[i+1],t1x=P[i][0]-p[0],t1z=P[i][1]-p[1],t2x=q[0]-P[i][0],t2z=q[1]-P[i][1],cs=(t1x*t2x+t1z*t2z)/((Math.hypot(t1x,t1z)||1)*(Math.hypot(t2x,t2z)||1));sc=1/Math.max(.55,Math.sqrt((1+cs)/2))}
+    const cx=P[i][0]+nx*off,cz=P[i][1]+nz*off,hw=w/2*Math.min(sc,1.8);L.push([cx+nx*hw,cz+nz*hw]);Rr.push([cx-nx*hw,cz-nz*hw])}
+  const V=q=>[q[0],hf(q[0],q[1])+yo,q[1]];for(let i=0;i<n-1;i++){const a=V(L[i]),b=V(Rr[i]),c=V(Rr[i+1]),d=V(L[i+1]);triUp(B,a,b,c,col);triUp(B,a,c,d,col)}}
+function dashed(B,pts,w,yo,col,hf){const P=resample(pts,1);for(let i=0;i<P.length-1;i++){if(i%7>=3)continue;ribbon(B,[P[i],P[i+1]],w,0,yo,col,hf)}}
+const SIDE_OK=new Set(['primary','secondary','tertiary','residential','unclassified','living_street']);
+function sideFlags(t,hw,pts,C){const v=t.sidewalk;if(v==='no'||v==='none'||v==='separate'||t['sidewalk:both']==='no')return{l:false,r:false};
+  let l=v==='both'||v==='yes'||v==='left'||t['sidewalk:both']==='yes'||t['sidewalk:left']==='yes',r=v==='both'||v==='yes'||v==='right'||t['sidewalk:both']==='yes'||t['sidewalk:right']==='yes';
+  if(!l&&!r&&v===undefined&&t['sidewalk:left']===undefined&&t['sidewalk:right']===undefined&&SIDE_OK.has(hw)&&C){const P=resample(pts,1);let hit=0;[.25,.5,.75].forEach(f=>{const q=P[Math.floor((P.length-1)*f)];if(C.near(q[0],q[1],14))hit++});if(hit>=2)l=r=true}
+  return{l,r}}
+const ASPH=[.23,.24,.26],SIDEC=[.62,.64,.67],CROSSC=[.88,.9,.92],MARKC=[.93,.93,.9],WATC=[.55,.72,.86],PARKC=[.72,.84,.66];
+function buildMeshes(F,hf,C){const bl=GB(),rd=GB(),sd=GB(),mk=GB(),wt=GB();
+  F.bld.forEach(b=>addBuilding(bl,b,hf));
+  F.water.forEach(w=>fillPoly(wt,w.ring,w.holes,(x,z)=>hf(x,z)+.06,WATC));F.park.forEach(w=>fillPoly(wt,w.ring,w.holes,(x,z)=>hf(x,z)+.07,PARKC));
+  F.road.forEach(r=>{const t=r.t,hw=t.highway;
+    if(RW[hw]!==undefined){let w=parseFloat(t.width);if(!(w>0))w=parseFloat(t.lanes)>0?Math.max(3,parseFloat(t.lanes)*3.2):RW[hw];w=Math.min(w,30);
+      ribbon(rd,r.pts,w,0,.14,ASPH,hf);const sf=sideFlags(t,hw,r.pts,C);if(sf.l)ribbon(sd,r.pts,2.2,-(w/2+1.2),.2,SIDEC,hf);if(sf.r)ribbon(sd,r.pts,2.2,w/2+1.2,.2,SIDEC,hf);
+      if(w>=6&&hw!=='service'&&hw!=='track'&&hw!=='living_street')dashed(mk,r.pts,.16,.27,MARKC,hf)}
+    else if(FW[hw]!==undefined){const cr=t.footway==='crossing'||t.footway==='traffic_island',ww=parseFloat(t.width)>0?Math.min(parseFloat(t.width),6):FW[hw];ribbon(sd,r.pts,cr?3.2:ww,0,cr?.24:.2,cr?CROSSC:SIDEC,hf)}});
+  return{bl,rd,sd,mk,wt}}
+function toMesh(B,mat){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(B.p),3));g.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(B.n),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(B.c),3));g.computeBoundingSphere();return new THREE.Mesh(g,mat)}
+function makeTrees(list,hf){const n=Math.min(list.length,400),cr=new THREE.InstancedMesh(new THREE.SphereGeometry(1.6,6,5),new THREE.MeshLambertMaterial({color:0x8fae86}),Math.max(1,n)),tr=new THREE.InstancedMesh(new THREE.CylinderGeometry(.15,.22,2.4,5),new THREE.MeshLambertMaterial({color:0x7a6a5a}),Math.max(1,n)),m=new THREE.Matrix4();
+  cr.count=tr.count=n;for(let i=0;i<n;i++){const x=list[i][0],z=list[i][1],y=hf(x,z);m.makeScale(1,1.25,1);m.setPosition(x,y+3.4,z);cr.setMatrixAt(i,m);m.makeScale(1,1,1);m.setPosition(x,y+1.2,z);tr.setMatrixAt(i,m)}return[cr,tr]}
+function mkCollide(F){const CELL=16,cells=new Map(),pc=new Map(),wc=new Map(),E=[],polys=[],wpolys=[],key=(i,j)=>i*4096+j;
+  const bbox=r=>{let a=1e9,b=1e9,c=-1e9,d=-1e9;r.forEach(p=>{a=Math.min(a,p[0]);b=Math.min(b,p[1]);c=Math.max(c,p[0]);d=Math.max(d,p[1])});return[a,b,c,d]};
+  const addBox=(m,bb,v)=>{for(let i=Math.floor(bb[0]/CELL);i<=Math.floor(bb[2]/CELL);i++)for(let j=Math.floor(bb[1]/CELL);j<=Math.floor(bb[3]/CELL);j++){const k=key(i,j);let a=m.get(k);if(!a){a=[];m.set(k,a)}a.push(v)}};
+  F.bld.forEach(b=>{const ty=b.t.building||b.t['building:part'];if(b.minh>3||ty==='roof'||ty==='carport'||ty==='canopy'||b.area<4)return;
+    const pi=polys.length;polys.push(b);addBox(pc,bbox(b.ring),pi);[b.ring].concat(b.holes).forEach(r=>{for(let i=0;i<r.length;i++){const a=r[i],c=r[(i+1)%r.length],k=E.length/4;E.push(a[0],a[1],c[0],c[1]);addBox(cells,bbox([a,c]),k)}})});
+  F.water.forEach(w=>{wpolys.push(w);addBox(wc,bbox(w.ring),wpolys.length-1)});
+  const inP=(m,arr,x,z)=>{const a=m.get(key(Math.floor(x/CELL),Math.floor(z/CELL)));if(!a)return false;for(const i of a){const b=arr[i];if(pipR(x,z,b.ring)&&!b.holes.some(h=>pipR(x,z,h)))return true}return false};
+  const Ef=Float32Array.from(E);
+  const near=(x,z,mm)=>{for(let i=Math.floor((x-mm)/CELL);i<=Math.floor((x+mm)/CELL);i++)for(let j=Math.floor((z-mm)/CELL);j<=Math.floor((z+mm)/CELL);j++){const a=cells.get(key(i,j));if(!a)continue;for(const k of a){const o=k*4,ax=Ef[o],az=Ef[o+1],dx=Ef[o+2]-ax,dz=Ef[o+3]-az,l2=dx*dx+dz*dz||1;let t=((x-ax)*dx+(z-az)*dz)/l2;t=Math.max(0,Math.min(1,t));if(Math.hypot(x-ax-dx*t,z-az-dz*t)<mm)return true}}return false};
+  return{cells,E:Ef,key,CELL,trees:F.tree.slice(0,400),inB:(x,z)=>inP(pc,polys,x,z),inW:(x,z)=>inP(wc,wpolys,x,z),near}}
+function mapFree(x,z,m){const C=MAP.col;if(!MAP.active||!C)return true;return!(C.inB(x,z)||C.inW(x,z)||(m>0&&C.near(x,z,m)))}
+function mapFreeNear(x,z,m){if(mapFree(x,z,m))return[x,z];for(let r=2;r<=70;r+=2)for(let k=0;k<12;k++){const a=k/12*6.283+r,qx=x+Math.cos(a)*r,qz=z+Math.sin(a)*r;if(Math.abs(qx)<230&&Math.abs(qz)<230&&mapFree(qx,qz,m))return[qx,qz]}return[x,z]}
+function mapCollide(){if(!MAP.active||!MAP.opt.coll||!MAP.col)return;const C=MAP.col,cx=Math.floor(pos.x/C.CELL),cz=Math.floor(pos.z/C.CELL),seen=new Set();
+  for(let i=cx-1;i<=cx+1;i++)for(let j=cz-1;j<=cz+1;j++){const a=C.cells.get(C.key(i,j));if(!a)continue;
+    for(const k of a){if(seen.has(k))continue;seen.add(k);const o=k*4,ax=C.E[o],az=C.E[o+1],dx=C.E[o+2]-ax,dz=C.E[o+3]-az,l2=dx*dx+dz*dz||1;let t=((pos.x-ax)*dx+(pos.z-az)*dz)/l2;t=Math.max(0,Math.min(1,t));
+      const ex=pos.x-(ax+dx*t),ez=pos.z-(az+dz*t),d=Math.hypot(ex,ez);if(d<.8){if(d>.001){pos.x+=ex/d*(.8-d);pos.z+=ez/d*(.8-d)}else{const l=Math.sqrt(l2);pos.x+=dz/l*.8;pos.z+=-dx/l*.8}}}}
+  if(MAP.opt.tree)for(const tc of C.trees){const ex=pos.x-tc[0],ez=pos.z-tc[1],d=Math.hypot(ex,ez);if(d<1.1&&d>.001){pos.x+=ex/d*(1.1-d);pos.z+=ez/d*(1.1-d)}}}
+function mapGeo(){if(MAP.grp){MAP.grp.traverse(o=>{if(o.geometry)o.geometry.dispose()});if(MAP.grp.parent)MAP.grp.parent.remove(MAP.grp)}
+  const F=MAP.F,hf=(MAP.opt.terr&&MAP.hf)?MAP.hf:()=>0;MAP.col=mkCollide(F);const M=buildMeshes(F,hf,MAP.col),grp=new THREE.Group();
+  const lam=po=>new THREE.MeshLambertMaterial({vertexColors:true,polygonOffset:po,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+  grp.bl=toMesh(M.bl,lam(false));grp.rd=toMesh(M.rd,lam(true));grp.sd=toMesh(M.sd,lam(true));grp.mk=toMesh(M.mk,lam(true));grp.wt=toMesh(M.wt,lam(true));
+  const tr=makeTrees(F.tree,hf);grp.tr=new THREE.Group();grp.tr.add(tr[0],tr[1]);[grp.bl,grp.rd,grp.sd,grp.mk,grp.wt,grp.tr].forEach(o=>grp.add(o));MAP.grp=grp;MAP.tris=Math.round((M.bl.p.length+M.rd.p.length+M.sd.p.length+M.mk.p.length+M.wt.p.length)/9);mapVis()}
+function mapVis(){const g=MAP.grp,o=MAP.opt;if(!g)return;g.bl.visible=o.bld;g.rd.visible=o.road;g.sd.visible=o.side;g.mk.visible=o.mark&&o.road;g.wt.visible=o.water;g.tr.visible=o.tree}
+
+// ---- map data sources (network) ----
+const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+async function geocode(q){const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));if(!r.ok)throw new Error('geocoder HTTP '+r.status);const j=await r.json();if(!j.length)throw new Error('address not found');return{lat:+j[0].lat,lon:+j[0].lon,name:j[0].display_name}}
+async function fetchOverpass(lat,lon,R){const a='(around:'+R+','+lat+','+lon+')',q='[out:json][timeout:40];(way["building"]'+a+';way["building:part"]'+a+';relation["building"]["type"="multipolygon"]'+a+';way["highway"]'+a+';way["natural"="water"]'+a+';relation["natural"="water"]["type"="multipolygon"]'+a+';way["waterway"="riverbank"]'+a+';way["leisure"~"park|garden"]'+a+';node["natural"="tree"]'+a+';);out tags geom;';
+  let err;for(const u of OVERPASS){try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});if(!r.ok)throw new Error('Overpass HTTP '+r.status);return await r.json()}catch(e){err=e}}throw err}
+async function fetchElev(lat,lon,half){const n=11,lats=[],lons=[],p=lat*Math.PI/180;
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const X=-half+2*half*i/(n-1),Z=-half+2*half*j/(n-1);lats.push((lat-Z/LATM(p)).toFixed(5));lons.push((lon+X/LONM(p)).toFixed(5))}
+  const vals=[];for(let k=0;k<lats.length;k+=100){const r=await fetch('https://api.open-meteo.com/v1/elevation?latitude='+lats.slice(k,k+100).join(',')+'&longitude='+lons.slice(k,k+100).join(','));if(!r.ok)throw new Error('elevation HTTP '+r.status);const j=await r.json();if(!j.elevation)throw new Error('no elevation data');vals.push(...j.elevation)}
+  return{n,half,vals:Float32Array.from(vals)}}
+const idb=()=>new Promise((res,rej)=>{const q=indexedDB.open('dd-map',1);q.onupgradeneeded=()=>q.result.createObjectStore('k');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+async function idbGet(k){try{const d=await idb();return await new Promise(r=>{const q=d.transaction('k').objectStore('k').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch(e){return null}}
+async function idbSet(k,v){try{const d=await idb();d.transaction('k','readwrite').objectStore('k').put(v,k)}catch(e){}}
+async function idbClear(){try{const d=await idb();d.transaction('k','readwrite').objectStore('k').clear()}catch(e){}}
+
+// ---- map glue: settings, loading, and integration with worlds, games and collisions ----
+const $m=id=>document.getElementById(id),sleepT=()=>new Promise(r=>setTimeout(r,0));
+function mapStatus(t){MAP.stat=t;const e=$m('mapSt');if(e)e.textContent=t}
+function updateInputs(){$m('mapLat').value=MAP.lat.toFixed(5);$m('mapLon').value=MAP.lon.toFixed(5);$m('mapR').value=MAP.R;$m('mapRv').textContent=MAP.R+' m';$m('mapOn').checked=MAP.on}
+async function mapBuild(raw,elev){mapStatus('Parsing map data...');await sleepT();
+  let F=parseOSM(raw,{lat:MAP.lat,lon:MAP.lon});
+  if(!F.bld.length&&!F.road.length){MAP.ready=false;mapStatus('No buildings or roads found at that location. Try a larger radius or another place.');return}
+  const sh=nearestRoad(F);F=shiftF(F,sh[0],sh[1]);MAP.shift=sh;MAP.hf=elev?mkTerrain(elev,sh[0],sh[1]):null;MAP.F=F;
+  mapStatus('Estimating building heights...');await sleepT();estimateHeights(F.bld);
+  mapStatus('Building geometry...');await sleepT();mapGeo();MAP.ready=true;
+  mapStatus(F.bld.length+' buildings, '+F.road.length+' roads and paths, '+F.tree.length+' trees, '+MAP.tris+' triangles'+(MAP.hf?', real terrain':', flat terrain')+(MAP.note2?' ('+MAP.note2+')':'')+'. Start point moved '+Math.round(Math.hypot(sh[0],sh[1]))+' m to the nearest road.')}
+async function mapLoad(force){if(MAP.loading)return;MAP.loading=true;MAP.note2='';
+  try{const key=MAP.lat.toFixed(5)+','+MAP.lon.toFixed(5)+','+MAP.R;
+    let raw=force?null:await idbGet('osm:'+key);
+    if(!raw){mapStatus('Downloading OpenStreetMap data (10 to 30 seconds)...');raw=await fetchOverpass(MAP.lat,MAP.lon,MAP.R);idbSet('osm:'+key,raw)}
+    let el=force?null:await idbGet('el:'+key);
+    if(!el&&MAP.opt.terr){try{mapStatus('Fetching terrain elevation...');el=await fetchElev(MAP.lat,MAP.lon,MAP.R+40);idbSet('el:'+key,el)}catch(e){el=null;MAP.note2='elevation unavailable, ground is flat'}}
+    await mapBuild(raw,el)}
+  catch(e){MAP.ready=false;mapStatus('Map failed: '+(e&&e.message?e.message:e)+'. This needs internet access to the OpenStreetMap servers. Use the GitHub Pages version, or import an OSM JSON file below.')}
+  MAP.loading=false}
+async function mapImport(file){try{const raw=JSON.parse(await file.text());if(!raw.elements)throw new Error('not an Overpass JSON file (export with "out geom")');
+    let a=1e9,b=1e9,c=-1e9,d=-1e9;const eat=g=>g&&g.forEach(q=>{if(q.lat!==undefined){a=Math.min(a,q.lat);c=Math.max(c,q.lat);b=Math.min(b,q.lon);d=Math.max(d,q.lon)}});
+    raw.elements.forEach(e=>{eat(e.geometry);if(e.members)e.members.forEach(m=>eat(m.geometry));if(e.type==='node'&&e.lat!==undefined)eat([e])});
+    if(a>c)throw new Error('no coordinates found, export with "out geom"');
+    MAP.lat=(a+c)/2;MAP.lon=(b+d)/2;const p=MAP.lat*Math.PI/180;MAP.R=Math.max(80,Math.min(240,Math.round(Math.max((c-a)*LATM(p),(d-b)*LONM(p))/2)));
+    MAP.on=true;updateInputs();MAP.loading=true;MAP.note2='';let el=null;
+    if(MAP.opt.terr){try{mapStatus('Fetching terrain elevation...');el=await fetchElev(MAP.lat,MAP.lon,MAP.R+40)}catch(e){MAP.note2='elevation unavailable, ground is flat'}}
+    await mapBuild(raw,el);MAP.loading=false;mapReapply()}catch(e){MAP.loading=false;mapStatus('Import failed: '+e.message)}}
+function mapPre(gi2){const gm=GM[gi2],want=MAP.on&&MAP.ready&&!!MAP.F,ok=want&&gm&&!gm.nomap;MAP.active=!!ok;
+  MAP.note=want&&!ok?'(Map hidden: this game builds its own arena.)':(MAP.on&&!MAP.ready?(MAP.loading?'(Map loading...)':'(Map not loaded, see Settings.)'):'');
+  MAPH=ok?((MAP.opt.terr&&MAP.hf)?MAP.hf:()=>0):null}
+function mapPost(){const a=MAP.active;if(MAP.grp){if(a&&!MAP.grp.parent)S.add(MAP.grp);MAP.grp.visible=a}
+  rocks.forEach(r=>{if(!r.tmp&&r.m){r.m.visible=!a;r.off=a}});pool.visible=!a;
+  if(a)scen.forEach(o=>{const u=o.userData;if(u.lava||u.pad||u.bn){const q=mapFreeNear(o.position.x,o.position.z,6);o.position.x=q[0];o.position.z=q[1];o.position.y=h(q[0],q[1])+(u.lava?.2:u.bn?0:.3)}})}
+async function mapSync(sp){if(!sp){if(MAP.on){MAP.on=false;$m('mapOn').checked=false}return}
+  const la=+sp.lat,lo=+sp.lon,R=Math.min(240,Math.max(80,+sp.R||160));if(!isFinite(la)||!isFinite(lo))return;
+  const same=MAP.ready&&Math.abs(MAP.lat-la)<1e-6&&Math.abs(MAP.lon-lo)<1e-6&&MAP.R===R&&MAP.opt.terr===!!sp.terr;MAP.on=true;
+  if(!same){MAP.lat=la;MAP.lon=lo;MAP.R=R;MAP.opt.terr=!!sp.terr;$m('mapTe').checked=MAP.opt.terr;MAP.ready=false;updateInputs();await mapLoad(false)}$m('mapOn').checked=true}
+function mapReapply(){if(isClient){mapStatus('Only the host can change the map.');return}applyWorld(wi,gi,seedNow());bcast()}
+function mapSet(){const la=parseFloat($m('mapLat').value),lo=parseFloat($m('mapLon').value),R=+$m('mapR').value;
+  if(isFinite(la)&&isFinite(lo)&&Math.abs(la)<=85&&Math.abs(lo)<=180&&(la!==MAP.lat||lo!==MAP.lon||R!==MAP.R)){MAP.lat=la;MAP.lon=lo;MAP.ready=false}
+  if(R!==MAP.R)MAP.ready=false;MAP.R=R;$m('mapRv').textContent=R+' m'}
+async function mapChanged(){if(isClient){mapStatus('Only the host can change the map.');return}mapSet();if(MAP.on){if(!MAP.ready)await mapLoad(false);mapReapply()}}
+$m('mapOn').onchange=async e=>{if(isClient){e.target.checked=MAP.on;mapStatus('Only the host can change the map.');return}MAP.on=e.target.checked;if(MAP.on){mapSet();if(!MAP.ready)await mapLoad(false)}mapReapply()};
+$m('mapLat').onchange=mapChanged;$m('mapLon').onchange=mapChanged;$m('mapR').oninput=()=>{$m('mapRv').textContent=$m('mapR').value+' m'};$m('mapR').onchange=mapChanged;
+$m('mapLoad').onclick=async()=>{if(isClient)return;mapSet();MAP.ready=false;await mapLoad(false);if(MAP.on)mapReapply()};
+$m('mapFind').onclick=async()=>{const q=$m('mapAddr').value.trim();if(!q)return;try{mapStatus('Looking up address...');const r=await geocode(q);MAP.lat=r.lat;MAP.lon=r.lon;MAP.ready=false;updateInputs();mapStatus('Found: '+r.name+'. Press Load / reload.');if(MAP.on)await mapChanged()}catch(e){mapStatus('Address lookup failed: '+e.message)}};
+$m('mapClr').onclick=async()=>{await idbClear();mapStatus('Cached map data cleared.')};
+$m('mapFile').onchange=e=>{if(e.target.files[0]&&!isClient)mapImport(e.target.files[0])};
+[['mapB','bld'],['mapRd','road'],['mapSd','side'],['mapMk','mark'],['mapWt','water'],['mapTr','tree'],['mapCo','coll']].forEach(([id,k])=>{$m(id).onchange=e=>{MAP.opt[k]=e.target.checked;mapVis()}});
+$m('mapTe').onchange=async e=>{MAP.opt.terr=e.target.checked;if(MAP.F){if(MAP.opt.terr&&!MAP.hf){MAP.ready=false;await mapLoad(false)}else mapGeo();if(MAP.on)mapReapply()}};
+['Lost Explorer','Delivery Driver','Bank Robbery Escape','Mystery Village','Mountain Climber','Obstacle Race','Rising Lava','Hide & Seek'].forEach(n=>{const g=GM.find(x=>x.n===n);if(g)g.nomap=1});
+
 applyWorld(0);
 function tick(){
   const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
@@ -992,8 +1185,8 @@ function tick(){
     const s=phoneOn?0:(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
     const mx=(-Math.sin(yaw)*f+Math.cos(yaw)*s)*sp,mz=(-Math.cos(yaw)*f-Math.sin(yaw)*s)*sp;
     if(WF==='ice'){vx+=(mx-vx)*Math.min(1,dt*1.3);vz+=(mz-vz)*Math.min(1,dt*1.3);pos.x+=vx;pos.z+=vz}else{pos.x+=mx;pos.z+=mz}
-    for(const r of rocks){const dx=pos.x-r.x,dz=pos.z-r.z,d=Math.hypot(dx,dz);if(d<r.r+.6){pos.x=r.x+dx/d*(r.r+.6);pos.z=r.z+dz/d*(r.r+.6)}}
-    pos.x=Math.max(-240,Math.min(240,pos.x));pos.z=Math.max(-240,Math.min(240,pos.z));platPhys();{const A=GM[gi]&&GM[gi].arena;if(A){const d=Math.hypot(pos.x,pos.z);if(d>A){pos.x*=A/d;pos.z*=A/d}}}
+    for(const r of rocks){if(r.off)continue;const dx=pos.x-r.x,dz=pos.z-r.z,d=Math.hypot(dx,dz);if(d<r.r+.6){pos.x=r.x+dx/d*(r.r+.6);pos.z=r.z+dz/d*(r.r+.6)}}
+    pos.x=Math.max(-240,Math.min(240,pos.x));pos.z=Math.max(-240,Math.min(240,pos.z));mapCollide();platPhys();{const A=GM[gi]&&GM[gi].arena;if(A){const d=Math.hypot(pos.x,pos.z);if(d>A){pos.x*=A/d;pos.z*=A/d}}}
   }
   const gy=Math.max(h(pos.x,pos.z),plats.length?elevAbs(pos.x,pos.z):-99)+1.7;pos.y+=(gy-pos.y)*Math.min(1,dt*12);
   cam.position.copy(pos);cam.position.y+=jy;cam.rotation.set(pitch,yaw,0);
