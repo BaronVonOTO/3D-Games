@@ -42,20 +42,6 @@ Generated live with Web Audio in stereo (panned pads and arpeggios, ping-pong ec
 ## Sound, settings and extras
 Music and sound effects each have a volume slider in the Settings dropdown (pause menu). Settings also holds phone mode, 3D depth, swap eyes and the option to draw HUD text into both eyes in 3D views (side-by-side, Cardboard, anaglyph and the rest). Trees and buildings appear in the games where they fit, and always in Zen Wander. Other players' names float over them in multiplayer. The home screen icon is included (icon-180/192/512.png, manifest.webmanifest, plus an inline copy in index.html).
 
-## Real-world map (OpenStreetMap)
-Settings, Real-world map. Turn it on, search an address or enter latitude, longitude and a radius (80 to 240 m), then Load.
-The game downloads real building footprints, roads, paths, water, parks and trees from OpenStreetMap (Overpass API), geocodes addresses with Nominatim, and samples terrain elevation from Open-Meteo. Nothing is baked in, so the location can be changed at any time without rebuilding.
-
-- **Look:** buildings are plain gray extruded blocks (walls and roofs only, no textures). Roads are dark asphalt with lighter sidewalks, footpaths and crossings, plus dashed center lines on wider roads. Water and parks are flat tinted shapes.
-- **Heights:** uses the height or building:levels tags and min_height for building parts. Missing heights are estimated from the building type and footprint, blended with nearby buildings that do have heights.
-- **Streets:** road widths come from width or lanes tags, or from the road class. Sidewalks come from sidewalk tags and footway=sidewalk ways, and are estimated beside urban roads without tags.
-- **Collision:** building walls, courtyards (inner rings) and trees block the player through a spatial grid. Items, markers, crates and scenery in every game are placed on free ground, never inside buildings or water. Your start point is moved to the nearest road.
-- **Toggles:** buildings, roads, sidewalks and crossings, road markings, water and parks, trees, terrain elevation and building collision. Cached data lives in your browser (Clear cache re-downloads).
-- **Offline or blocked networks:** download an Overpass JSON file yourself (overpass-turbo.eu, query the area, export raw data, with `out geom;`) and use Import OSM JSON.
-- **Games and themes:** all themes and games keep working. These games build their own arena or terrain, so they hide the map for that round: Lost Explorer, Delivery Driver, Bank Robbery Escape, Mystery Village, Mountain Climber, Obstacle Race, Rising Lava and Hide & Seek. Real terrain replaces a theme's hills while the map is on.
-- **Multiplayer:** the host's map settings are sent to everyone and each player loads the same area.
-- **Attribution:** map data from OpenStreetMap contributors (ODbL). Please keep the credit if you publish it, and keep use of the free Nominatim, Overpass and Open-Meteo services light.
-
 ## Multiplayer
 Open the pause screen (Esc). One player presses **Host game** and shares the 4-letter code. Others type it and press
 **Join**. The chooser rotates every round: the host picks first, then each player in turn picks the next world and game
