@@ -1,59 +1,107 @@
 # Dusk Dunes
 
-A first-person 3D world in the browser (three.js) with 15 simple game modes and 15 stereoscopic viewing methods
-inspired by [Anaglyph & Friends](https://github.com/udeudeude/Anaglyph-and-Friends).
+A browser-based 3D world with ten themed worlds, over thirty short games, live-generated music, positional sound, real stereoscopic 3D viewing modes, and peer-to-peer multiplayer. It is one self-contained HTML file with no build step, no accounts and no downloads, and it runs on desktop and on phones.
 
-**Controls:** click to look, WASD or arrows to move, Shift to run, Esc to pause (game and view pickers live there),
-M cycles views, [ and ] change depth, R restarts the game.
+## Play
 
-**10 worlds:** Dusk Dunes, Coral Reef, Moon Base, Candy Kingdom, Haunted Moor, Neon Grid, Cloud Peaks, Ember Caverns, Frozen Aurora, Mushroom Jungle. Each world re-themes the scenery and the
-15 games (for example Pearl Hunt, Shark Chase, Asteroid Dodge, Gumdrop Delivery, Wisp Hunt).
+Open `index.html` in a modern browser (or host the folder on any static web server) and click **Start**.
 
-**32 games** (hover a card in the pause menu for a short description). Open-world: Treasure Island, Escape the Forest, Lost Explorer, Delivery Driver, Zombie Escape, Mountain Climber, Alien Planet, Bank Robbery Escape, Island Survival, Mystery Village. Multiplayer: Hide & Seek, Obstacle Race, King of the Hill, Treasure Rush, Rising Lava, Hot Tag, Team Defense, Hot Potato, Light Rush. Classic modes: Light Hunt, Hot & Cold, Statues, Capture the Flag, Safe Zone, Meteor Dodge, Memory Lights, Stop and Go, Snake Trail, Demolition, Herding, Beacon Defense, Zen Wander.
+| | Desktop | iPhone / touch |
+|---|---|---|
+| Look | Mouse (click to capture) | Tilt or turn the phone, or swipe |
+| Move | `W A S D` or arrow keys, `Shift` to run | Always moving forward |
+| Brake | n/a | Touch and hold |
+| Jump | `Space` | Tap, or flick the phone up |
+| Dive / swim down | `C` (swimming worlds) | Flick the phone down |
+| Pause menu | `Esc` | **Menu** button |
+| Change 3D view | `M` | Pause menu |
 
-**3D views** (pick one): normal, red/cyan and optimized red/cyan anaglyph, parallel, cross-eyed, Cardboard phone viewer, ChromaDepth, depth map, disparity map, random-dot and pattern autostereograms, sway parallax, double-image overlay, wipe compare.
+The pause menu is where you pick the world, the game, the 3D view, effects and multiplayer. Hover (or tap) a game card to read a one-line description.
 
-**Effects** (checkboxes, stack with any 3D view and with each other): fisheye dome, kaleidoscope, underwater ripple, tilt-shift miniature, chromatic split, toon outline, contour lines, neon depth edges, night vision, retro 8-bit dither, CRT scanlines. Any future non-3D effect goes here too.
+## Worlds
 
-**Each world plays differently:** Dusk Dunes (downhill slopes speed you up, shooting stars), Coral Reef (swim with
-Space/C, rising bubbles, floating pearls), Moon Base (low gravity leaps, Earth in the sky), Candy Kingdom (sugar-rush
-speed pads), Haunted Moor (lightning flashes, drifting wisps).
+Each world changes the scenery, sky, lighting, music scale, footstep sound and how you move.
 
-**New genres:** Pop-Up (whack-a-mole), Memory Lights (Simon), Stop and Go (red light, green light), Gaze Gallery (aim shooter),
-Photo Safari, Snake Trail, Dot Eater (maze), Demolition, Herding, Tag, Rally, Beacon Defense, Statues (horror), Gift Catch.
+| World | What is different |
+|---|---|
+| Dusk Dunes | Downhill slopes speed you up; shooting stars |
+| Coral Reef | Swim up and down (`Space` / `C`); bubbles and floating pickups |
+| Moon Base | Low gravity for long leaps; Earth in the sky |
+| Candy Kingdom | Speed pads give a short sugar rush |
+| Haunted Moor | Lightning flashes light up the fog |
+| Neon Grid | Flat synthwave plain; glowing lanes boost your speed |
+| Cloud Peaks | Huge mountains; ride updraft columns |
+| Ember Caverns | Lava pools slow you down; rising embers |
+| Frozen Aurora | Icy ground: you slide and keep momentum; snow and aurora |
+| Mushroom Jungle | Glowing mushrooms bounce you high |
 
-## iPhone / phone mode
-On iPhone (or any touch device, or by ticking Phone mode) you always move forward. Turn your body or tilt the phone to
-look and steer, touch and hold to brake, tap to jump. Tap Start and allow motion access when asked. Pair it with the
-Cardboard view in a headset. (Motion sensors need https, which GitHub Pages provides.)
+## Games
 
-**New worlds, each with its own mechanic:** Neon Grid (flat synthwave plain, run on glowing lanes for speed), Cloud Peaks
-(huge mountains, ride updraft columns), Ember Caverns (lava pools slow you, rising embers), Frozen Aurora (icy sliding,
-aurora and snowfall), Mushroom Jungle (bounce on glowing mushrooms). Terrain height now changes per world.
+- **Open world:** Treasure Island, Escape the Forest, Lost Explorer, Delivery Driver, Zombie Escape, Mountain Climber, Alien Planet, Bank Robbery Escape, Island Survival, Mystery Village
+- **Multiplayer:** Hide & Seek, Obstacle Race, King of the Hill, Treasure Rush, Rising Lava, Hot Tag, Team Defense, Hot Potato, Light Rush
+- **Classic modes:** Light Hunt, Hot & Cold, Statues, Capture the Flag, Safe Zone, Meteor Dodge, Memory Lights, Stop and Go, Snake Trail, Demolition, Herding, Beacon Defense, Zen Wander
 
-## iPhone extras
-Phone mode defaults on for touch devices, and swiping always steers. Flick the phone up to jump and down to dive. The screen is kept awake
-(Wake Lock, with a video fallback for older iOS). Safari cannot hide its bars on iPhone, so for true full screen use
-Share, Add to Home Screen, and launch it from the home screen.
+On-screen text is kept to what matters for play: direction arrows, villager messages, warnings and countdowns. A setting restores the full timers and counters.
 
-## Music
-Generated live with Web Audio in stereo (panned pads and arpeggios, ping-pong echo, reverb). The world sets the scale, sound and tempo; the game sets the mood (calm, explore, mystery, tense, action, party). A short win or lose jingle plays when a round ends. Use the Music box and volume slider in the pause menu. On iPhone the ring/silent switch can mute it.
+## 3D viewing
 
-## Sound, settings and extras
-Music and sound effects each have a volume slider in the Settings dropdown (pause menu). Settings also holds phone mode, 3D depth, swap eyes and the option to draw HUD text into both eyes in 3D views (side-by-side, Cardboard, anaglyph and the rest). Trees and buildings appear in the games where they fit, and always in Zen Wander. Other players' names float over them in multiplayer. The home screen icon is included (icon-180/192/512.png, manifest.webmanifest, plus an inline copy in index.html).
+Pick one **3D view** and stack any number of **effects** on top of it.
+
+- **Views:** normal, red/cyan and optimized red/cyan anaglyph, parallel and cross-eyed side by side, Cardboard phone-headset view (with lens distortion), ChromaDepth, depth map, disparity map, random-dot and pattern autostereograms, sway parallax, double-image overlay, wipe compare.
+- **Effects:** fisheye dome, kaleidoscope, underwater ripple, tilt-shift miniature, chromatic split, toon outline, contour lines, neon depth edges, night vision, 8-bit dither, CRT scanlines.
+- In 3D views the on-screen text is drawn into both eyes so it stays readable and fuses at a comfortable depth.
+- Depth strength can be adjusted and the eyes swapped in Settings.
+
+Both eyes are rendered from the actual scene, so no depth estimation is involved.
+
+## Sound
+
+Everything is synthesized live with the Web Audio API; there are no audio files.
+
+- **Music:** stereo, generated from the world (scale, tempo, instruments) and the game (calm, explore, mystery, tense, action or party mood).
+- **Positional sound:** zombies growl, police sirens sweep past, boulders rumble, meteors whistle, sheep bleat, lights chime, and other players' footsteps are heard from where they actually are, using HRTF 3D audio. Headphones work best.
+- **Effects:** pickups, jumps, landings, hits and win or lose jingles, plus quiet stereo footsteps that change with each world's ground.
+- Music and sound effects have independent volume sliders. On iPhone the ring/silent switch can mute web audio.
 
 ## Multiplayer
-Open the pause screen (Esc). One player presses **Host game** and shares the 4-letter code. Others type it and press
-**Join**. The chooser rotates every round: the host picks first, then each player in turn picks the next world and game
-(the pause menu opens automatically when it is your turn). Everyone gets the same layout (shared seed), sees each
-other's avatars, and the top-right scoreboard shows who has finished. The host's R restarts everyone for a rematch.
 
-It uses PeerJS (WebRTC peer-to-peer) with the free PeerJS cloud broker for matchmaking, so it works from GitHub Pages
-but not from sandboxed previews that block outside connections. Strict networks may need a TURN server.
+Peer-to-peer over WebRTC using [PeerJS](https://peerjs.com). One player chooses **Host** and shares the four-letter code; others enter it and choose **Join**.
 
-## Publish on GitHub Pages
-1. Create a new public repo on github.com and upload these files (keep the `.github` folder).
-2. Repo Settings, Pages, Source: **GitHub Actions**.
-3. Push to `main`. The site appears at `https://YOUR-USER.github.io/YOUR-REPO/`.
+- The host runs the shared game state, so everyone sees the same objects, scores and results. Players appear as named avatars, bump into each other, and can be heard in 3D.
+- The right to choose the next world and game rotates between players every round.
+- Modes with real interaction include tag, bomb passing, contested hills, stealing treasure, a rising-lava race and hide and seek with a blind seeker.
+- Matchmaking uses the free public PeerJS broker. Strict corporate networks may need a TURN server.
 
-No build step. It is a single `index.html` that loads three.js from a CDN.
+## Settings
+
+Music and sound-effect volume, phone mode, 3D depth, swap eyes, text in both eyes, full HUD text, and population sliders for **trees**, **buildings** and **obelisks**.
+
+## Install on a phone or desktop
+
+- **iPhone:** in Safari choose Share, then Add to Home Screen. It opens full screen with the dusk icon.
+- **Desktop:** the page ships with a rounded favicon and a web app manifest, so Chromium browsers offer to install it.
+
+## Hosting
+
+The repository root is the whole site. Any static host works. A GitHub Pages workflow is included (`.github/workflows/pages.yml`): set Pages to use GitHub Actions and push to `main`. Motion sensors (iPhone tilt) and the clipboard-free features need HTTPS, which Pages provides.
+
+## Built with
+
+- [three.js](https://threejs.org) r128 for rendering
+- Web Audio API for music, effects and positional sound
+- [PeerJS](https://peerjs.com) for multiplayer
+- Plain HTML, CSS and JavaScript in a single file
+
+## Browser support
+
+Current Chrome, Edge, Firefox and Safari (desktop and iOS 14.5+ for device tilt). WebGL is required. Wake Lock keeps the screen on during play where the browser supports it (iOS 16.4+).
+
+## Project layout
+
+```
+index.html              the entire game
+manifest.webmanifest    install metadata
+icon-180.png            Apple touch icon (square)
+icon-192.png, icon-512.png   rounded install icons
+.github/workflows/      GitHub Pages deployment
+```
