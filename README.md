@@ -12,11 +12,12 @@ Open `index.html` in a modern browser (or host the folder on any static web serv
 | Move | `W A S D` or arrow keys, `Shift` to run | Always moving forward |
 | Brake | n/a | Touch and hold |
 | Jump | `Space` | Tap, or flick the phone up |
-| Dive / swim down | `C` (swimming worlds) | Flick the phone down |
+| Dive / swim down / fly down | `C` | Flick the phone down |
+| Fly up (Zen Wander) | Hold `Space` | Tilt the phone up |
 | Pause menu | `Esc` | **Menu** button |
 | Change 3D view | `M` | Pause menu |
 
-The pause menu is where you pick the world, the game, the 3D view, effects and multiplayer. Hover (or tap) a game card to read a one-line description.
+The pause menu is where you pick the world, the game, the 3D view, effects and multiplayer. Hover (or tap) a game card to read a one-line description, and use the search box and category filter (multiplayer, single player, or a genre) to find a game quickly.
 
 ## Worlds
 
@@ -41,6 +42,8 @@ Each world changes the scenery, sky, lighting, music scale, footstep sound and h
 - **Multiplayer:** Hide & Seek, Obstacle Race, King of the Hill, Treasure Rush, Rising Lava, Hot Tag, Team Defense, Hot Potato, Light Rush
 - **Classic modes:** Light Hunt, Hot & Cold, Statues, Capture the Flag, Safe Zone, Meteor Dodge, Memory Lights, Stop and Go, Snake Trail, Demolition, Herding, Beacon Defense, Zen Wander
 
+**Zen Wander** has no goals: fly freely (hold `Space`), float along a lazy river, swim in the ponds and wade the streams.
+
 On-screen text is kept to what matters for play: direction arrows, villager messages, warnings and countdowns. A setting restores the full timers and counters.
 
 ## 3D viewing
@@ -48,11 +51,16 @@ On-screen text is kept to what matters for play: direction arrows, villager mess
 Pick one **3D view** and stack any number of **effects** on top of it.
 
 - **Views:** normal, red/cyan and optimized red/cyan anaglyph, parallel and cross-eyed side by side, Cardboard phone-headset view (with lens distortion), ChromaDepth, depth map, disparity map, random-dot and pattern autostereograms, sway parallax, double-image overlay, wipe compare.
-- **Effects:** fisheye dome, kaleidoscope, underwater ripple, tilt-shift miniature, chromatic split, toon outline, contour lines, neon depth edges, night vision, 8-bit dither, CRT scanlines.
-- In 3D views the on-screen text is drawn into both eyes so it stays readable and fuses at a comfortable depth.
+- **Effects:** invert colors, fisheye dome, kaleidoscope, underwater ripple, tilt-shift miniature, chromatic split, toon outline, contour lines, neon depth edges, night vision, 8-bit dither, CRT scanlines.
+- Side-by-side views (parallel, cross-eyed and Cardboard) crop each eye to half the screen instead of squashing the picture, so nothing is stretched. The Cardboard lens distortion is aspect-correct.
+- In 3D views the on-screen text is drawn into both eyes at its natural proportions so it stays readable and fuses at a comfortable depth. The text size slider scales it.
 - Depth strength can be adjusted and the eyes swapped in Settings.
 
 Both eyes are rendered from the actual scene, so no depth estimation is involved.
+
+## Water
+
+Ponds, lakes and streams are carved into the terrain, so the water has real depth. You wade in the shallows and swim in deep water (slower, head at the surface; hold `C` to dive, with blue fog underwater). Streams and the lazy river carry you along with their current. Sliders in Settings set how many ponds and streams appear, and the multiplayer host's values are shared with everyone so all players see the same water. Trees, buildings and obelisks are never placed in water, and pickups float on the surface. Games that build their own arena (for example the obstacle race) skip the extra water.
 
 ## Sound
 
@@ -60,7 +68,7 @@ Everything is synthesized live with the Web Audio API; there are no audio files.
 
 - **Music:** stereo, generated from the world (scale, tempo, instruments) and the game (calm, explore, mystery, tense, action or party mood).
 - **Positional sound:** zombies growl, police sirens sweep past, boulders rumble, meteors whistle, sheep bleat, lights chime, and other players' footsteps are heard from where they actually are, using HRTF 3D audio. Headphones work best.
-- **Effects:** pickups, jumps, landings, hits and win or lose jingles, plus quiet stereo footsteps that change with each world's ground.
+- **Effects:** pickups, jumps, landings, hits, splashes and swimming strokes, win or lose jingles, plus quiet stereo footsteps that change with each world's ground. Streams burble in 3D as you pass them.
 - Music and sound effects have independent volume sliders. On iPhone the ring/silent switch can mute web audio.
 
 ## Multiplayer
@@ -74,7 +82,7 @@ Peer-to-peer over WebRTC using [PeerJS](https://peerjs.com). One player chooses 
 
 ## Settings
 
-Music and sound-effect volume, phone mode, 3D depth, swap eyes, text in both eyes, full HUD text, and population sliders for **trees**, **buildings** and **obelisks**.
+Music and sound-effect volume, text size, phone mode, 3D depth, swap eyes, text in both eyes, full HUD text, and population sliders for **trees**, **buildings**, **obelisks**, **ponds and lakes** and **flowing streams**.
 
 ## Install on a phone or desktop
 
